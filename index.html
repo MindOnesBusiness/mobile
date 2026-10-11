@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MOB Vault</title>
+<meta name="description" content="The MOB Vault — tarot-style digital booklets from MindOnesBusiness.">
+<meta name="theme-color" content="#0a0907">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MOB Vault">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://www.blockonomics.co/js/pay-button.js" async></script>
+<script>
+/* ===================== MOB VAULT SETTINGS =====================
+   1. Paste your Supabase Project URL and anon (public) key below.
+      Supabase → Project Settings → API. The anon key is safe to be public.
+   2. THEME: pick a key from THEMES further down ("gilded", "halloween", "classic", ...).
+   3. PAY: your Blockonomics pay-button uids (from each product's button code).
+   If SUPABASE_URL is set back to YOUR-PROJECT, the app runs in PREVIEW MODE. */
+const CONFIG = {
+  SUPABASE_URL: 'https://ytceurmqxmpstcdbionu.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0Y2V1cm1xeG1wc3RjZGJpb251Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2ODM3NDAsImV4cCI6MjEwNzI1OTc0MH0.2XmSYbet3H6Ld79WvsA_F1VlckwItw_NwlFDEZdDM-g',
+  THEME: 'gilded',
+  VIP_PRICE_LABEL: '$22 / month',
+  CODEX_PRICE_LABEL: '$100',
+  PAY: {
+    membership: '845dc7070bc64dc2',   // $22 — 30 days of VIP
+    codex:      'b1d8f46914ec46f6',   // $100 — Codex pre-sale, includes 6 months VIP
+    donation:   '0b56850650344c20'    // $1+ — Support the Guild
+  },
+  ADMIN_EMAIL: 'admin@mindonesbusiness.com'
+};
+</script>
+<style>
+:root{
+  --bg:#0a0907; --bg2:#13110d; --card:#17140f; --card2:#211c14;
+  --ink:#f2ead9; --muted:#a3967f; --foil:#c9a160; --foil2:#e8c98c;
+  --accent:#7a5a2a; --vip:#ffd27a; --danger:#ff5a5a;
+  --radius:18px; --nav:68px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:'Cormorant Garamond',Georgia,serif; font-size:19px; line-height:1.5;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  background-image:radial-gradient(ellipse at top, color-mix(in srgb,var(--accent) 22%, transparent), transparent 60%),
+                   radial-gradient(ellipse at bottom, color-mix(in srgb,var(--foil) 10%, transparent), transparent 55%);
+  background-attachment:fixed;
+}
+h1,h2,h3,.cinzel{font-family:'Cinzel',serif;letter-spacing:.06em}
+button,input,textarea,select{font:inherit;color:inherit}
+a{color:var(--foil2)}
+.app{max-width:560px;margin:0 auto;min-height:100%;padding:calc(env(safe-area-inset-top) + 12px) 16px calc(var(--nav) + env(safe-area-inset-bottom) + 24px)}
+
+/* header */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
+.brand img{width:42px;height:42px;display:block}
+.logo,.brand img{mix-blend-mode:screen;-webkit-mask-image:radial-gradient(circle closest-side,#000 80%,transparent 87%);mask-image:radial-gradient(circle closest-side,#000 80%,transparent 87%)}
+.logo{display:block;width:100%;height:auto}
+blockonomics-pay-button:not(:defined)::before{content:"Loading checkout…";font-style:italic;color:var(--muted)}
+.brand b{font-family:'Cinzel';font-weight:900;font-size:20px;letter-spacing:.14em}
+.brand small{display:block;font-size:11px;letter-spacing:.3em;color:var(--muted);font-family:'Cinzel'}
+.badge{font-family:'Cinzel';font-size:11px;letter-spacing:.18em;padding:6px 10px;border-radius:999px;border:1px solid var(--muted);color:var(--muted);white-space:nowrap}
+.badge.vip{border-color:var(--vip);color:var(--vip);box-shadow:0 0 14px color-mix(in srgb,var(--vip) 45%,transparent)}
+.preview-bar{font-family:'Cinzel';font-size:11px;letter-spacing:.12em;text-align:center;padding:8px;border:1px dashed var(--foil);border-radius:12px;color:var(--foil2);margin-bottom:16px}
+
+/* shelf */
+.section-title{font-family:'Cinzel';font-size:13px;letter-spacing:.3em;color:var(--muted);margin:6px 0 14px;text-transform:uppercase}
+.shelf{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.vol{position:relative;aspect-ratio:2/3.3;border-radius:var(--radius);cursor:pointer;border:0;background:none;text-align:center;transition:transform .25s}
+.vol:active{transform:scale(.97)}
+.vol.soon{cursor:default;opacity:.7}
+.vol-inner{position:absolute;inset:0;border-radius:var(--radius);background:linear-gradient(160deg,var(--card2),var(--card));
+  border:1.5px solid var(--foil);box-shadow:inset 0 0 0 6px var(--card),inset 0 0 0 7px color-mix(in srgb,var(--foil) 60%,transparent),0 12px 30px rgba(0,0,0,.5);
+  display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:18px 12px}
+.vol .num{font-family:'Cinzel';color:var(--foil);font-size:15px;letter-spacing:.2em}
+.vol .coin{width:76%}
+
+.vol h3{font-size:15px;line-height:1.25;color:var(--ink)}
+.vol p{font-size:14px;color:var(--muted);font-style:italic}
+.vol .tag{font-family:'Cinzel';font-size:10px;letter-spacing:.2em;color:var(--vip)}
+
+/* tarot page */
+.reader-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.back{background:none;border:0;color:var(--muted);font-family:'Cinzel';font-size:13px;letter-spacing:.12em;cursor:pointer;padding:6px 0}
+.counter{font-family:'Cinzel';font-size:12px;letter-spacing:.2em;color:var(--muted)}
+.tarot{position:relative;border-radius:22px;background:linear-gradient(170deg,var(--card2),var(--card) 60%);
+  border:1.5px solid var(--foil);padding:12px;min-height:62vh;box-shadow:0 20px 50px rgba(0,0,0,.55);animation:flip .45s ease}
+@keyframes flip{from{transform:perspective(900px) rotateY(-14deg) translateX(14px);opacity:0}to{transform:none;opacity:1}}
+.tarot-frame{border:1px solid color-mix(in srgb,var(--foil) 55%,transparent);border-radius:14px;min-height:calc(62vh - 24px);padding:22px 20px 26px;position:relative;display:flex;flex-direction:column}
+.corner{position:absolute;width:22px;height:22px;color:var(--foil)}
+.corner.tl{top:6px;left:6px}.corner.tr{top:6px;right:6px;transform:scaleX(-1)}.corner.bl{bottom:6px;left:6px;transform:scaleY(-1)}.corner.br{bottom:6px;right:6px;transform:scale(-1)}
+.numeral{font-family:'Cinzel';font-weight:700;text-align:center;color:var(--foil);font-size:22px;letter-spacing:.25em}
+.page-title{text-align:center;font-size:24px;margin:6px 0 4px;line-height:1.2}
+.rule{display:flex;align-items:center;gap:10px;color:var(--foil);margin:10px 0 16px}
+.rule::before,.rule::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--foil),transparent)}
+.body p{margin:0 0 12px}
+.body ul,.body ol{margin:0 0 12px 22px}
+.body li{margin-bottom:6px}
+.body blockquote{border-left:2px solid var(--foil);padding:4px 0 4px 14px;font-style:italic;color:var(--foil2);margin:0 0 14px}
+.body strong{color:var(--foil2)}
+.body .declare{border:1px dashed var(--vip);border-radius:12px;padding:14px;font-style:italic}
+.locked{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px}
+.locked .coin{width:60%;max-width:220px;border-radius:50%;animation:pulse 3s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 18px color-mix(in srgb,var(--vip) 25%,transparent)}50%{box-shadow:0 0 42px color-mix(in srgb,var(--vip) 55%,transparent)}}
+.paybtn{display:block;margin-top:6px}
+.paybtn blockonomics-pay-button{display:inline-block}
+.locked p{color:var(--muted);font-style:italic}
+.pager{display:flex;justify-content:space-between;align-items:center;margin-top:16px;gap:12px}
+.dots{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;flex:1}
+.dot{width:7px;height:7px;border-radius:50%;background:color-mix(in srgb,var(--muted) 45%,transparent)}
+.dot.on{background:var(--foil)}.dot.v{box-shadow:0 0 0 1px var(--vip)}
+
+/* buttons & forms */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border-radius:12px;border:1px solid var(--foil);background:transparent;color:var(--foil2);
+  font-family:'Cinzel';font-size:13px;letter-spacing:.14em;cursor:pointer;text-decoration:none;min-height:44px}
+.btn.solid{background:var(--foil);color:#140e05;font-weight:700}
+.btn.vip{border-color:var(--vip);color:var(--vip);box-shadow:0 0 16px color-mix(in srgb,var(--vip) 35%,transparent)}
+.btn.vip.solid{background:var(--vip);color:#1a1205}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.round{width:46px;padding:0}
+.panel{background:color-mix(in srgb,var(--card) 85%,transparent);border:1px solid color-mix(in srgb,var(--foil) 30%,transparent);border-radius:var(--radius);padding:18px;margin-bottom:16px}
+.panel h2{font-size:17px;margin-bottom:10px}
+.panel p{color:var(--muted);margin-bottom:12px}
+label{display:block;font-family:'Cinzel';font-size:11px;letter-spacing:.2em;color:var(--muted);margin:10px 0 6px}
+input,textarea,select{width:100%;background:var(--bg2);border:1px solid color-mix(in srgb,var(--muted) 40%,transparent);border-radius:10px;padding:11px 12px;font-size:17px}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--foil)}
+textarea{min-height:110px;resize:vertical}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.tabs{display:flex;gap:8px;margin-bottom:6px}
+.tabs button{flex:1;background:none;border:0;border-bottom:2px solid transparent;padding:8px;font-family:'Cinzel';font-size:12px;letter-spacing:.16em;color:var(--muted);cursor:pointer}
+.tabs button.on{color:var(--foil2);border-color:var(--foil)}
+
+/* forum */
+.cat-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:12px}
+.chip{flex:none;border:1px solid color-mix(in srgb,var(--muted) 45%,transparent);border-radius:999px;padding:6px 12px;font-size:14px;background:none;cursor:pointer;color:var(--muted)}
+.chip.on{border-color:var(--vip);color:var(--vip)}
+.thread{display:block;width:100%;text-align:left;background:var(--card);border:1px solid color-mix(in srgb,var(--foil) 22%,transparent);border-radius:14px;padding:14px;margin-bottom:10px;cursor:pointer}
+.thread h3{font-family:'Cormorant Garamond';font-weight:600;font-size:19px;letter-spacing:0}
+.meta{font-size:13px;color:var(--muted);font-family:'Cinzel';letter-spacing:.08em;margin-top:4px}
+.post{border-left:2px solid color-mix(in srgb,var(--foil) 50%,transparent);padding:4px 0 4px 14px;margin:14px 0}
+.post .who{font-family:'Cinzel';font-size:13px;letter-spacing:.1em;color:var(--foil2)}
+.post .txt{white-space:pre-wrap}
+
+/* nav */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(10px);
+  border-top:1px solid color-mix(in srgb,var(--foil) 30%,transparent);padding-bottom:env(safe-area-inset-bottom)}
+.nav-in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);height:var(--nav)}
+.nav a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-decoration:none;color:var(--muted);font-family:'Cinzel';font-size:10px;letter-spacing:.14em}
+.nav a svg{width:22px;height:22px}
+.nav a.on{color:var(--foil)}
+.toast{position:fixed;left:50%;bottom:calc(var(--nav) + 20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--card2);border:1px solid var(--foil);padding:10px 16px;border-radius:12px;z-index:30;font-size:16px;max-width:90vw;text-align:center}
+.empty{text-align:center;color:var(--muted);font-style:italic;padding:24px 0}
+.hero{text-align:center;margin:4px 0 22px}
+.hero h1{font-size:26px;line-height:1.2}
+.hero p{color:var(--muted);font-style:italic;margin-top:6px}
+.hidden{display:none!important}
+.gate-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.panel .gate-emotion{font-size:30px;color:var(--foil2);margin:6px 0 4px;letter-spacing:.08em}
+.gate-signal{font-size:17px;margin-bottom:8px}
+.gate-q{font-family:'Cormorant Garamond';font-weight:600;font-style:italic;font-size:20px;letter-spacing:0;line-height:1.35;margin:4px 0 10px}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<nav class="nav"><div class="nav-in" id="nav"></div></nav>
+
+<script>
+/* ============ THEMES (seasonal reskins: add a new block, set CONFIG.THEME) ============ */
+const THEMES = {
+  gilded:   {bg:'#0a0907',bg2:'#13110d',card:'#17140f',card2:'#211c14',ink:'#f2ead9',muted:'#a3967f',foil:'#c9a160',foil2:'#e8c98c',accent:'#7a5a2a',vip:'#ffd27a'},
+  halloween:{bg:'#0c0a0e',bg2:'#15101a',card:'#1b1422',card2:'#241a2d',ink:'#f1e7d6',muted:'#a8998a',foil:'#ff7a1a',foil2:'#ffb15c',accent:'#8a3ffc',vip:'#b6ff3b'},
+  classic:  {bg:'#0a0a0a',bg2:'#141414',card:'#171717',card2:'#202020',ink:'#f4f1ea',muted:'#9a958c',foil:'#f7931a',foil2:'#ffb44d',accent:'#f7931a',vip:'#a4ff3c'},
+  winter:   {bg:'#070b12',bg2:'#0e1520',card:'#111a27',card2:'#172234',ink:'#eef3f8',muted:'#8fa0b3',foil:'#d9b56a',foil2:'#f0d48f',accent:'#3d7fd9',vip:'#7ef7ff'}
+};
+
+/* ============ ART: brand emblem (logo.webp) ============ */
+const LOGO = 'brand-logo.jpg';
+const EMBLEM = `<img class="logo" src="${LOGO}" alt="">`;
+/* Fugio cent motif kept for optional use */
+const FUGIO = `<svg viewBox="0 0 200 200" fill="none" stroke="currentColor" aria-hidden="true">
+<defs><path id="arcT" d="M30,100 a70,70 0 1,1 140,0"/><path id="arcB" d="M26,104 a74,74 0 0,0 148,0"/></defs>
+<circle cx="100" cy="100" r="94" stroke-width="2"/><circle cx="100" cy="100" r="86" stroke-width="1" opacity=".6"/>
+<g stroke-width="2.2" stroke-linecap="round">${Array.from({length:16},(_,i)=>{const a=i*Math.PI/8,x1=100+Math.cos(a)*24,y1=72+Math.sin(a)*24,x2=100+Math.cos(a)*(i%2?32:37),y2=72+Math.sin(a)*(i%2?32:37);return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`}).join('')}</g>
+<circle cx="100" cy="72" r="18" stroke-width="2.2"/>
+<circle cx="93" cy="69" r="1.8" fill="currentColor"/><circle cx="107" cy="69" r="1.8" fill="currentColor"/>
+<path d="M92 78 q8 6 16 0" stroke-width="2" stroke-linecap="round"/>
+<path d="M58 140 a42 42 0 0 1 84 0 z" stroke-width="2.2"/>
+<g stroke-width="1.4">${[-60,-40,-20,0,20,40,60].map(d=>{const a=(d-90)*Math.PI/180;return `<line x1="100" y1="140" x2="${(100+Math.cos(a)*40).toFixed(1)}" y2="${(140+Math.sin(a)*40).toFixed(1)}" opacity=".7"/>`}).join('')}</g>
+<path d="M100 140 L100 108 L122 140" stroke-width="2.2" stroke-linejoin="round"/>
+<text font-family="Cinzel,serif" font-size="15" letter-spacing="3" fill="currentColor" stroke="none" font-weight="700"><textPath href="#arcT" startOffset="50%" text-anchor="middle">FUGIO · 1787</textPath></text>
+<text font-family="Cinzel,serif" font-size="12" letter-spacing="2.4" fill="currentColor" stroke="none" font-weight="700"><textPath href="#arcB" startOffset="50%" text-anchor="middle">MIND YOUR BUSINESS</textPath></text>
+</svg>`;
+const CORNER = `<svg class="corner CLS" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 14V2h12"/><path d="M6 10V6h4"/><circle cx="2" cy="2" r="1.6" fill="currentColor"/></svg>`;
+const ICONS = {
+  shelf:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="16" rx="1"/><path d="M17.5 5.5l3 .8-3.6 13.7-3-.8"/></svg>',
+  guild:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5h16v10H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg>',
+  journal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h12v18H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M8 3v18M11 8h5M11 11h5"/></svg>',
+  account:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>'
+};
+
+/* ============ PREVIEW DATA (used only until Supabase keys are added) ============
+   VIP page bodies are NOT included here on purpose — they live only in Supabase. */
+const PREVIEW = {
+  volumes:[
+    {id:'destiny-lock',numeral:'I',title:'Destiny Lock',subtitle:'Guard your path against destiny swapping',status:'live',sort:1},
+    {id:'codex-7-gates',numeral:'II',title:'Codex of the 7 Gates',subtitle:'Coming soon to the Vault',status:'soon',sort:2}
+  ],
+  pages:null, // filled from seed below
+  categories:[{id:1,name:'Introductions'},{id:2,name:'Destiny Lock Circle'},{id:3,name:'Shadow Work'},{id:4,name:'Guild Business'}],
+  threads:[
+    {id:1,category_id:1,title:'Light the lantern — introduce yourself',body:'Who are you, where are you traveling from, and what brought you to the Vault?',created_at:new Date().toISOString(),author:{display_name:'Evergreen'},posts:[{id:1,body:'Grateful to be in the circle.',created_at:new Date().toISOString(),author:{display_name:'Guild Member'}}]},
+    {id:2,category_id:2,title:'Seal the Morning — 7-day streak check-in',body:'Post your day count and anything you noticed.',created_at:new Date().toISOString(),author:{display_name:'Evergreen'},posts:[]}
+  ]
+};
+
+/* Free pages are shown in preview; VIP pages show only their title + teaser. */
+PREVIEW.pages = [
+ {id:1,volume_id:'destiny-lock',sort:0,numeral:'0',title:'The Threshold',tier:'free',teaser:'',body:`<blockquote>Your blessings have your name on them. Keep it that way.</blockquote><p>Ever had everything lined up — then watched it slip away while someone else walked off with your exact breakthrough? Same job. Same favor. Same momentum.</p><p>Many traditions have a name for it. This booklet gives you <strong>fast, quiet, daily defenses</strong> — each one takes under five minutes.</p><p>Swipe to begin.</p>`},
+ {id:2,volume_id:'destiny-lock',sort:1,numeral:'I',title:'What Is Destiny Swapping?',tier:'free',teaser:'',body:`<p><strong>Destiny swapping</strong> is the spiritual belief that a person's God-given path — their favor, opportunities, relationships, gifts and timing — can be diverted, traded or siphoned off by another, through envy, manipulation, ritual, or quietly gaining access to your energy, words or personal items.</p><p><strong>The signs people describe:</strong></p><ul><li>Repeated "almost" moments — the door closes at the last second</li><li>Someone close rising in exactly the areas where you stall</li><li>Sudden fog or heaviness after a certain connection</li><li>Dreams of losing, trading or handing over something valuable</li></ul><p>Whether you see it as spiritual warfare, energetic drain, or plain human envy — the defense starts the same way: <strong>guard your access points.</strong></p>`},
+ {id:3,volume_id:'destiny-lock',sort:2,numeral:'II',title:'Seal the Morning',tier:'free',teaser:'',body:`<p><em>Sixty seconds.</em> Before your phone, before anyone else's voice, speak your name and claim your day aloud:</p><p class="declare">"What is mine comes to me. What is not mine leaves me."</p><p>Whoever claims the first words of the day sets its direction. Make it you.</p>`},
+ {id:4,volume_id:'destiny-lock',sort:3,numeral:'III',title:'Guard Your Gates',tier:'free',teaser:'',body:`<p>Hair, nail clippings, worn clothing and photos are treated in many traditions as carriers of your essence.</p><ul><li>Dispose of them yourself.</li><li>Don't lend what carries your scent or sweat.</li><li>Be mindful of who holds your photos.</li></ul>`},
+ {id:5,volume_id:'destiny-lock',sort:4,numeral:'IV',title:'Shut the Leak',tier:'free',teaser:'',body:`<p>Don't announce plans before they're done. Keep your birth time, full name and future moves on a need-to-know basis.</p><blockquote>Silence is a shield.</blockquote><p>Bonus: it's also solid protection against everyday scams and identity theft.</p>`},
+ {id:6,volume_id:'destiny-lock',sort:5,numeral:'V',title:'Return to Sender',tier:'vip',teaser:'Discernment for gifts, tokens and favors that come with strings.'},
+ {id:7,volume_id:'destiny-lock',sort:6,numeral:'VI',title:'Cut the Cord',tier:'vip',teaser:'A three-minute release to take your energy back.'},
+ {id:8,volume_id:'destiny-lock',sort:7,numeral:'VII',title:'The Mirror Check',tier:'vip',teaser:'Where you may be handing your power over yourself.'},
+ {id:9,volume_id:'destiny-lock',sort:8,numeral:'VIII',title:'Night Watch',tier:'vip',teaser:'Guarding the gate while you sleep.'},
+ {id:10,volume_id:'destiny-lock',sort:9,numeral:'IX',title:'The Emergency Reset',tier:'vip',teaser:'Four steps for the days everything is being pulled from you.'},
+ {id:11,volume_id:'destiny-lock',sort:10,numeral:'X',title:'The Destiny Declaration',tier:'vip',teaser:'Your personal reclamation, written in your name.'},
+ {id:12,volume_id:'destiny-lock',sort:11,numeral:'XI',title:'Red Flag Quick-Scan',tier:'vip',teaser:'Eight signs someone may be drawing from your well.'},
+ {id:13,volume_id:'destiny-lock',sort:12,numeral:'XII',title:'Pass the Lantern',tier:'free',teaser:'',body:`<p>Protect your path — and pass the lantern to someone who keeps <em>almost</em> making it.</p><p>The Inner Circle holds the full booklet, your private journal, and the <strong>Guild Hall</strong>, where members walk this road together.</p>`}
+];
+
+const SEVEN_GATES = [
+  {n:'I',   gate:'Bones',         emotion:'Fear',           chakra:'Root',         signal:'Something ahead needs preparing for.',      q:'What is this fear asking me to prepare for — and what is the one step that gets me ready?'},
+  {n:'II',  gate:'Blood',         emotion:'Guilt',          chakra:'Sacral',       signal:'I broke one of my own standards.',           q:'Which of my own standards did I break, and how do I make it right today?'},
+  {n:'III', gate:'Ash',           emotion:'Anger',          chakra:'Solar Plexus', signal:'A boundary or rule that matters was crossed.', q:'What line was crossed, and what do I need to say or protect so it doesn\'t happen again?'},
+  {n:'IV',  gate:'Hollow Heart',  emotion:'Hurt & Loneliness', chakra:'Heart',     signal:'An expectation went unmet, or I need connection.', q:'What did I expect that didn\'t happen — and who can I reach toward today?'},
+  {n:'V',   gate:'Sealed Tongue', emotion:'Frustration',    chakra:'Throat',       signal:'What I\'m doing isn\'t working.',            q:'What keeps not working, and what new approach will I try next?'},
+  {n:'VI',  gate:'Clouded Eye',   emotion:'Disappointment', chakra:'Third Eye',    signal:'Reality fell short of what I pictured.',     q:'What did I expect, was it realistic, and what do I adjust — the expectation or the plan?'},
+  {n:'VII', gate:'Broken Crown',  emotion:'Inadequacy',     chakra:'Crown',        signal:'I need more skill, tools, or support.',      q:'Where do I feel not enough — and what one thing can I learn, practice, or ask for?'}
+];
+const JOURNAL_PROMPTS = [
+  'Where have I handed over my power, my ideas, or my time without meaning to?',
+  'Which "almost" moment still stings — and what did I share before it fell apart?',
+  'Who do I feel tangled with? What would it feel like to release them without hatred?',
+  'What is assigned to me that I have not yet claimed out loud?',
+  'What did my dreams show me this week?'
+];
+
+/* ============ STATE ============ */
+const S = { sb:null, preview:false, user:null, profile:null, isVip:false, vipUntil:null, volumes:[], pages:{}, cats:[], demoVip:false, demoUser:false };
+const $app = document.getElementById('app');
+
+/* ============ HELPERS ============ */
+const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const when = iso => { try { return new Date(iso).toLocaleDateString(undefined,{month:'short',day:'numeric'}); } catch(e){ return ''; } };
+function toast(msg){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3200); }
+function store(key,val){ try{ if(val===undefined) return JSON.parse(localStorage.getItem(key)||'null'); localStorage.setItem(key,JSON.stringify(val)); }catch(e){ return null; } }
+function payButton(uid, label){ return uid ? `<span class="paybtn"><blockonomics-pay-button uid="${esc(uid)}" label="${esc(label)}"></blockonomics-pay-button></span>` : '<p><em>Payments open soon.</em></p>'; }
+function vipPanel(){ return `<div class="panel" style="border-color:var(--vip)"><h2 style="color:var(--vip)">Become VIP · ${esc(CONFIG.VIP_PRICE_LABEL)}</h2>
+   <p>Unlock every sealed page in every volume, the private Shadow Journal, and the Guild Hall members' forum. Each payment unlocks <strong>30 days</strong>.</p>
+   ${payButton(CONFIG.PAY.membership,'Join with Crypto')}
+   <p style="margin-top:12px;font-size:16px">Your VIP key is sent to the email you enter at checkout. Enter it on the Account tab after you sign in.</p></div>`; }
+function applyTheme(){ const t=THEMES[CONFIG.THEME]||THEMES.gilded; const r=document.documentElement.style; Object.entries(t).forEach(([k,v])=>r.setProperty('--'+k,v)); document.querySelector('meta[name=theme-color]').content=t.bg; }
+const signedIn = () => S.preview ? S.demoUser : !!S.user;
+const vip = () => S.preview ? S.demoVip : S.isVip;
+const displayName = () => S.preview ? 'Preview Member' : (S.profile?.display_name || S.user?.email || '');
+
+/* ============ DATA ============ */
+async function loadProfile(){
+  if(S.preview || !S.user){ S.profile=null; S.isVip=false; S.vipUntil=null; return; }
+  const { data } = await S.sb.from('profiles').select('display_name,is_vip,vip_source,vip_until').eq('id',S.user.id).maybeSingle();
+  S.profile = data;
+  S.vipUntil = data?.vip_until ? new Date(data.vip_until) : null;
+  S.isVip = !!data?.is_vip || (!!S.vipUntil && S.vipUntil > new Date());
+}
+async function loadVolumes(){
+  if(S.preview){ S.volumes=PREVIEW.volumes; return; }
+  const { data, error } = await S.sb.from('volumes').select('*').order('sort');
+  if(error) toast('Could not load the shelf.');
+  S.volumes = data || [];
+}
+async function loadPages(volId, force){
+  if(S.pages[volId] && !force) return S.pages[volId];
+  if(S.preview){ S.pages[volId]=PREVIEW.pages.filter(p=>p.volume_id===volId); return S.pages[volId]; }
+  const { data, error } = await S.sb.from('pages').select('id,volume_id,sort,numeral,title,tier,teaser,page_bodies(body)').eq('volume_id',volId).order('sort');
+  if(error) toast('Could not open this volume.');
+  S.pages[volId] = (data||[]).map(p=>({...p, body: Array.isArray(p.page_bodies) ? p.page_bodies[0]?.body : p.page_bodies?.body }));
+  return S.pages[volId];
+}
+
+/* ============ NAV + HEADER ============ */
+function renderNav(active){
+  const items=[['shelf','Shelf','#/shelf'],['guild','Guild Hall','#/guild'],['journal','Journal','#/journal'],['account','Account','#/account']];
+  document.getElementById('nav').innerHTML = items.map(([k,l,h])=>`<a href="${h}" class="${k===active?'on':''}">${ICONS[k]}<span>${l}</span></a>`).join('');
+}
+function header(){
+  const b = !signedIn() ? '<span class="badge">GUEST</span>' : vip() ? '<span class="badge vip">VIP</span>' : '<span class="badge">MEMBER</span>';
+  return `${S.preview?'<div class="preview-bar">PREVIEW MODE · add your Supabase keys to go live</div>':''}
+  <div class="top"><a class="brand" href="#/shelf"><img src="${LOGO}" alt="MOB Vault"><span><b>MOB VAULT</b><small>MIND YOUR BUSINESS</small></span></a>${b}</div>`;
+}
+function vipGate(title, line){
+  return `<div class="panel" style="text-align:center"><div class="locked" style="padding:10px 0"><div class="coin">${EMBLEM}</div>
+  <h2>${esc(title)}</h2><p>${esc(line)}</p>
+  <a class="btn vip solid" href="#/account">${signedIn()?'Enter the Inner Circle':'Sign in to continue'}</a></div></div>`;
+}
+
+/* ============ VIEWS ============ */
+async function viewShelf(){
+  renderNav('shelf');
+  $app.innerHTML = header()+'<div class="empty">Opening the Vault…</div>';
+  await loadVolumes();
+  $app.innerHTML = header()+`<div class="hero"><h1>The Vault Is Open</h1><p>Choose a volume. Some pages are sealed for the Inner Circle.</p></div>
+  <div class="section-title">The Shelf</div>
+  <div class="shelf">${S.volumes.map(v=>`<button class="vol ${v.status==='soon'?'soon':''}" data-vol="${esc(v.id)}" ${v.status==='soon'?'disabled':''}>
+    <div class="vol-inner"><span></span><div class="coin">${EMBLEM}</div>
+    <div><h3>${esc(v.title)}</h3><p>${esc(v.subtitle||'')}</p>${v.status==='soon'?'<div class="tag">COMING SOON</div>':''}</div></div></button>`).join('')}</div>`;
+  $app.insertAdjacentHTML('beforeend', `
+  ${vip()?'':'<div class="section-title" style="margin-top:26px">Inner Circle</div>'+vipPanel()}
+  <div class="section-title" style="margin-top:26px">Pre-Sale</div>
+  <div class="panel"><h2>Codex of the 7 Gates · ${esc(CONFIG.CODEX_PRICE_LABEL)}</h2>
+   <p>Reserve Volume II before it opens. Your bundle includes <strong style="color:var(--vip)">6 months of VIP</strong> — every sealed page, the Shadow Journal and the Guild Hall.</p>
+   ${payButton(CONFIG.PAY.codex,'Pre-order with Crypto')}
+   <p style="margin-top:12px;font-size:16px">Your VIP key arrives at the email you enter at checkout.</p></div>
+  <div class="panel"><h2>Support the Guild</h2><p>Keep the lanterns lit. Give any amount from $1.</p>${payButton(CONFIG.PAY.donation,'Donate with Crypto')}</div>`);
+  $app.querySelectorAll('[data-vol]').forEach(b=>b.onclick=()=>location.hash=`#/read/${b.dataset.vol}/0`);
+}
+
+async function viewReader(volId, idx){
+  renderNav('shelf');
+  const pages = await loadPages(volId);
+  if(!S.volumes.length) await loadVolumes();
+  const vol = S.volumes.find(v=>v.id===volId);
+  if(!pages.length){ $app.innerHTML=header()+'<div class="empty">This volume has no pages yet.</div>'; return; }
+  idx = Math.max(0, Math.min(pages.length-1, idx|0));
+  const p = pages[idx];
+  const sealed = p.tier==='vip' && (!vip() || !p.body);
+  let inner;
+  if(p.tier==='vip' && vip() && S.preview){
+    inner = `<div class="locked"><div class="coin">${EMBLEM}</div><p>${esc(p.teaser||'')}</p><p>Preview: once your database is connected, VIP members read this page here.</p></div>`;
+  } else if(sealed){
+    inner = `<div class="locked"><div class="coin">${EMBLEM}</div><p>${esc(p.teaser||'This page is sealed.')}</p>
+      <a class="btn vip solid" href="#/account">${signedIn()?'Unlock with VIP':'Sign in to unlock'}</a></div>`;
+  } else inner = `<div class="body">${p.body||''}</div>`;
+  $app.innerHTML = header()+`
+  <div class="reader-head"><button class="back" onclick="location.hash='#/shelf'">‹ SHELF</button><span class="counter">${esc(vol?.title||'')} · ${idx+1}/${pages.length}</span></div>
+  <article class="tarot" id="card"><div class="tarot-frame">
+    ${['tl','tr','bl','br'].map(c=>CORNER.replace('CLS',c)).join('')}
+    <div class="numeral">${esc(p.numeral)}</div><h2 class="page-title">${esc(p.title)}</h2>
+    <div class="rule">✦</div>${inner}
+  </div></article>
+  <div class="pager"><button class="btn round" id="prev" ${idx===0?'disabled':''} aria-label="Previous page">‹</button>
+   <div class="dots">${pages.map((q,i)=>`<span class="dot ${i===idx?'on':''} ${q.tier==='vip'?'v':''}"></span>`).join('')}</div>
+   <button class="btn round" id="next" ${idx===pages.length-1?'disabled':''} aria-label="Next page">›</button></div>`;
+  const go = d => { const n=idx+d; if(n>=0&&n<pages.length) location.hash=`#/read/${volId}/${n}`; };
+  document.getElementById('prev').onclick=()=>go(-1);
+  document.getElementById('next').onclick=()=>go(1);
+  const card=document.getElementById('card'); let sx=null;
+  card.addEventListener('touchstart',e=>sx=e.touches[0].clientX,{passive:true});
+  card.addEventListener('touchend',e=>{ if(sx===null)return; const dx=e.changedTouches[0].clientX-sx; if(Math.abs(dx)>50) go(dx<0?1:-1); sx=null; });
+  document.onkeydown = e => { if(!location.hash.startsWith('#/read'))return; if(e.key==='ArrowRight')go(1); if(e.key==='ArrowLeft')go(-1); };
+}
+
+/* ---- Guild Hall (VIP forum) ---- */
+let guildCat = null;
+async function loadCats(){
+  if(S.preview){ S.cats=PREVIEW.categories; return; }
+  const { data } = await S.sb.from('forum_categories').select('*').order('sort'); S.cats=data||[];
+}
+async function viewGuild(){
+  renderNav('guild');
+  if(!vip()){ $app.innerHTML=header()+`<div class="hero"><h1>The Guild Hall</h1><p>Where the Inner Circle gathers.</p></div>`+vipGate('Members Only','The Guild Hall is open to VIP members — discussions, check-ins and fellowship with the whole guild.'); return; }
+  $app.innerHTML=header()+'<div class="empty">Opening the hall…</div>';
+  await loadCats();
+  let threads=[];
+  if(S.preview) threads=PREVIEW.threads.filter(t=>!guildCat||t.category_id===guildCat);
+  else {
+    let q=S.sb.from('forum_threads').select('id,title,created_at,category_id,author:profiles(display_name),forum_posts(count)').order('created_at',{ascending:false}).limit(50);
+    if(guildCat) q=q.eq('category_id',guildCat);
+    const { data, error } = await q; if(error) toast('Could not load discussions.'); threads=data||[];
+  }
+  const catName = id => S.cats.find(c=>c.id===id)?.name || '';
+  $app.innerHTML=header()+`<div class="hero"><h1>The Guild Hall</h1><p>Speak freely. Mind your business — and each other's back.</p></div>
+  <div class="cat-chips"><button class="chip ${!guildCat?'on':''}" data-c="">All</button>${S.cats.map(c=>`<button class="chip ${guildCat===c.id?'on':''}" data-c="${c.id}">${esc(c.name)}</button>`).join('')}</div>
+  <div class="row" style="margin:0 0 14px"><button class="btn vip" id="newT">+ Start a Discussion</button></div>
+  <div id="newForm" class="panel hidden"><h2>New Discussion</h2>
+    <label>Category</label><select id="tCat">${S.cats.map(c=>`<option value="${c.id}" ${guildCat===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select>
+    <label>Title</label><input id="tTitle" maxlength="140">
+    <label>Message</label><textarea id="tBody" maxlength="5000"></textarea>
+    <div class="row"><button class="btn solid" id="tPost">Post</button><button class="btn" id="tCancel">Cancel</button></div></div>
+  ${threads.length?threads.map(t=>{const n=S.preview?(t.posts||[]).length:(t.forum_posts?.[0]?.count||0);return `<button class="thread" data-t="${t.id}"><h3>${esc(t.title)}</h3>
+   <div class="meta">${esc(t.author?.display_name||'Member')} · ${esc(catName(t.category_id))} · ${when(t.created_at)} · ${n} ${n===1?'reply':'replies'}</div></button>`}).join(''):'<div class="empty">No discussions yet. Light the first lantern.</div>'}`;
+  $app.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{guildCat=b.dataset.c?+b.dataset.c:null;viewGuild();});
+  $app.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>location.hash='#/guild/'+b.dataset.t);
+  const f=document.getElementById('newForm');
+  document.getElementById('newT').onclick=()=>f.classList.remove('hidden');
+  document.getElementById('tCancel').onclick=()=>f.classList.add('hidden');
+  document.getElementById('tPost').onclick=async()=>{
+    const title=document.getElementById('tTitle').value.trim(), body=document.getElementById('tBody').value.trim(), cat=+document.getElementById('tCat').value;
+    if(!title||!body) return toast('Add a title and a message.');
+    if(S.preview) return toast('Preview mode: posting turns on once Supabase is connected.');
+    const { error } = await S.sb.from('forum_threads').insert({title,body,category_id:cat,author_id:S.user.id});
+    if(error) return toast('Could not post: '+error.message);
+    toast('Posted to the Guild Hall.'); viewGuild();
+  };
+}
+async function viewThread(id){
+  renderNav('guild');
+  if(!vip()) return viewGuild();
+  let t, posts;
+  if(S.preview){ t=PREVIEW.threads.find(x=>x.id===+id); posts=t?.posts||[]; }
+  else {
+    const r1 = await S.sb.from('forum_threads').select('id,title,body,created_at,author:profiles(display_name)').eq('id',id).maybeSingle(); t=r1.data;
+    const r2 = await S.sb.from('forum_posts').select('id,body,created_at,author:profiles(display_name)').eq('thread_id',id).order('created_at'); posts=r2.data||[];
+  }
+  if(!t){ $app.innerHTML=header()+'<div class="empty">Discussion not found.</div>'; return; }
+  $app.innerHTML=header()+`<div class="reader-head"><button class="back" onclick="location.hash='#/guild'">‹ GUILD HALL</button></div>
+  <div class="panel"><h2 style="font-family:'Cormorant Garamond';font-size:23px;letter-spacing:0">${esc(t.title)}</h2>
+   <div class="meta">${esc(t.author?.display_name||'Member')} · ${when(t.created_at)}</div>
+   <div class="post" style="border-color:var(--vip)"><div class="txt">${esc(t.body)}</div></div>
+   ${posts.map(p=>`<div class="post"><div class="who">${esc(p.author?.display_name||'Member')} <span class="meta">· ${when(p.created_at)}</span></div><div class="txt">${esc(p.body)}</div></div>`).join('')||'<div class="empty">No replies yet.</div>'}
+  </div>
+  <div class="panel"><label>Your reply</label><textarea id="rBody" maxlength="5000"></textarea><div class="row"><button class="btn solid" id="rPost">Reply</button></div></div>`;
+  document.getElementById('rPost').onclick=async()=>{
+    const body=document.getElementById('rBody').value.trim(); if(!body) return;
+    if(S.preview) return toast('Preview mode: replies turn on once Supabase is connected.');
+    const { error } = await S.sb.from('forum_posts').insert({thread_id:+id,body,author_id:S.user.id});
+    if(error) return toast('Could not reply: '+error.message);
+    viewThread(id);
+  };
+}
+
+/* ---- Journal (VIP, saved privately on this device) ---- */
+function viewJournal(){
+  renderNav('journal');
+  if(!vip()){ $app.innerHTML=header()+`<div class="hero"><h1>The Shadow Journal</h1><p>The Seven Gates and more — private prompts for every emotion.</p></div>`+vipGate('Sealed for the Inner Circle','Your journal is saved privately on your own device. Unlock it with VIP.'); return; }
+  const entries = store('mobvault.journal') || {};
+  const box = (key) => `<textarea data-j="${key}" placeholder="Write freely…">${esc(entries[key]||'')}</textarea>`;
+  $app.innerHTML=header()+`<div class="hero"><h1>The Shadow Journal</h1><p>Saved only on this device. No one else can read it — not even us.</p></div>
+  <div class="section-title">The Seven Gates · Seven Emotions</div>
+  <div class="panel" style="text-align:center;border-color:var(--vip)">
+    <p style="margin:0 0 8px">One prompt for each of the seven emotions in the Codex. When a feeling rises, find its gate and work the Rite:</p>
+    <div class="cinzel" style="color:var(--vip);font-size:15px;letter-spacing:.2em">NAME IT · HEAR IT · HEED IT</div>
+  </div>
+  ${SEVEN_GATES.map(g=>`<div class="panel gate">
+    <div class="gate-head"><span class="numeral" style="font-size:14px;text-align:left">GATE ${g.n} · ${esc(g.gate.toUpperCase())}</span><span class="meta" style="margin:0">${esc(g.chakra)}</span></div>
+    <h2 class="gate-emotion">${esc(g.emotion)}</h2>
+    <p class="gate-signal"><strong>Hear it:</strong> ${esc(g.signal)}</p>
+    <h3 class="gate-q">${esc(g.q)}</h3>
+    ${box('g'+g.n)}</div>`).join('')}
+  <div class="section-title" style="margin-top:28px">Destiny Lock · Reflections</div>
+  ${JOURNAL_PROMPTS.map((q,i)=>`<div class="panel"><div class="numeral" style="font-size:14px;text-align:left">${['I','II','III','IV','V'][i]}</div>
+   <h3 class="gate-q">${esc(q)}</h3>${box(i)}</div>`).join('')}`;
+  $app.querySelectorAll('[data-j]').forEach(t=>t.oninput=()=>{const e=store('mobvault.journal')||{}; e[t.dataset.j]=t.value; store('mobvault.journal',e);});
+}
+
+/* ---- Account ---- */
+let authTab='in';
+function viewAccount(){
+  renderNav('account');
+  if(!signedIn()){
+    $app.innerHTML=header()+`<div class="hero"><h1>Enter the Vault</h1><p>Create a free account to begin. VIP unlocks everything sealed.</p></div>
+    <div class="panel"><div class="tabs"><button class="${authTab==='in'?'on':''}" data-tab="in">SIGN IN</button><button class="${authTab==='up'?'on':''}" data-tab="up">JOIN FREE</button></div>
+     ${authTab==='up'?'<label>Display name</label><input id="aName" maxlength="40" autocomplete="nickname">':''}
+     <label>Email</label><input id="aEmail" type="email" autocomplete="email">
+     <label>Password</label><input id="aPass" type="password" autocomplete="${authTab==='up'?'new-password':'current-password'}" minlength="8">
+     <div class="row"><button class="btn solid" id="aGo">${authTab==='up'?'Create Account':'Sign In'}</button>${authTab==='in'?'<button class="btn" id="aForgot">Forgot password</button>':''}</div></div>
+    ${vipPanel()}`;
+    $app.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{authTab=b.dataset.tab;viewAccount();});
+    document.getElementById('aGo').onclick=doAuth;
+    const fg=document.getElementById('aForgot'); if(fg) fg.onclick=async()=>{
+      const email=document.getElementById('aEmail').value.trim(); if(!email) return toast('Enter your email first.');
+      if(S.preview) return toast('Preview mode.');
+      const { error } = await S.sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin}); toast(error?error.message:'Check your email for a reset link.');
+    };
+    return;
+  }
+  $app.innerHTML=header()+`<div class="hero"><h1>${esc(displayName())}</h1><p>${vip()?'Inner Circle · VIP':'Free Member'}</p></div>
+  ${vip()?`<div class="panel" style="border-color:var(--vip)"><h2 style="color:var(--vip)">VIP Active</h2>
+   <p>${S.vipUntil && !S.profile?.is_vip ? `Your VIP runs through <strong>${S.vipUntil.toLocaleDateString(undefined,{month:'long',day:'numeric',year:'numeric'})}</strong>. Renew any time — each payment adds 30 days.` : 'Every sealed page, the Shadow Journal and the Guild Hall are open to you.'}</p>
+   ${S.vipUntil && !S.profile?.is_vip ? payButton(CONFIG.PAY.membership,'Renew · '+CONFIG.VIP_PRICE_LABEL) : ''}</div>
+  <div class="panel"><h2>Have a VIP Key?</h2><p>Renewal keys add their time to your membership.</p>
+   <label>VIP key</label><input id="code" placeholder="MOB-XXXX-XXXX" autocapitalize="characters">
+   <div class="row"><button class="btn vip" id="redeem">Redeem Key</button></div></div>`:`
+  <div class="panel" style="border-color:var(--vip)"><h2 style="color:var(--vip)">Become VIP · ${esc(CONFIG.VIP_PRICE_LABEL)}</h2>
+   <p>Unlock every sealed page in every volume, the private Shadow Journal, and the Guild Hall members' forum.</p>
+   <p>Each payment unlocks <strong>30 days</strong> of VIP.</p>
+   ${payButton(CONFIG.PAY.membership,'Join with Crypto')}
+   <p style="margin-top:12px;font-size:16px">After paying, your VIP key is sent to the email you enter at checkout. Questions: <a href="mailto:${esc(CONFIG.ADMIN_EMAIL)}">${esc(CONFIG.ADMIN_EMAIL)}</a></p></div>
+  <div class="panel"><h2>Have a VIP Key?</h2><p>Codex pre-sale buyers: your key is in your bundle email.</p>
+   <label>VIP key</label><input id="code" placeholder="MOB-XXXX-XXXX" autocapitalize="characters">
+   <div class="row"><button class="btn vip" id="redeem">Unlock VIP</button></div></div>`}
+  ${S.preview?`<div class="panel"><h2>Preview Controls</h2><p>Flip VIP on and off to see both experiences.</p><div class="row"><button class="btn vip" id="demoVip">${S.demoVip?'Turn VIP off':'Preview as VIP'}</button></div></div>`:''}
+  <div class="row"><button class="btn" id="out">Sign Out</button></div>`;
+  const r=document.getElementById('redeem'); if(r) r.onclick=redeem;
+  const dv=document.getElementById('demoVip'); if(dv) dv.onclick=()=>{S.demoVip=!S.demoVip;viewAccount();};
+  document.getElementById('out').onclick=async()=>{ if(S.preview){S.demoUser=false;S.demoVip=false;} else await S.sb.auth.signOut(); location.hash='#/shelf'; };
+}
+async function doAuth(){
+  const email=document.getElementById('aEmail').value.trim(), pass=document.getElementById('aPass').value;
+  if(!email||pass.length<8) return toast('Enter your email and a password of 8+ characters.');
+  if(S.preview){ S.demoUser=true; toast('Preview: signed in.'); return viewAccount(); }
+  if(authTab==='up'){
+    const name=(document.getElementById('aName').value.trim()||email.split('@')[0]).slice(0,40);
+    const { data, error } = await S.sb.auth.signUp({email,password:pass,options:{data:{display_name:name},emailRedirectTo:location.origin}});
+    if(error) return toast(error.message);
+    if(!data.session) return toast('Check your email to confirm your account.');
+  } else {
+    const { error } = await S.sb.auth.signInWithPassword({email,password:pass});
+    if(error) return toast(error.message);
+  }
+}
+async function redeem(){
+  const code=document.getElementById('code').value.trim().toUpperCase(); if(!code) return;
+  if(S.preview){ S.demoVip=true; toast('Preview: VIP unlocked.'); return viewAccount(); }
+  const { data, error } = await S.sb.rpc('redeem_vip_code',{p_code:code});
+  if(error) return toast(error.message);
+  if(!data) return toast('That key is invalid or already used.');
+  await loadProfile(); S.pages={}; toast('Welcome to the Inner Circle.'); viewAccount();
+}
+
+/* ============ ROUTER ============ */
+async function route(){
+  const parts=(location.hash||'#/shelf').slice(2).split('/');
+  try{
+    if(parts[0]==='read') return await viewReader(decodeURIComponent(parts[1]), +parts[2]||0);
+    if(parts[0]==='guild') return parts[1] ? await viewThread(parts[1]) : await viewGuild();
+    if(parts[0]==='journal') return viewJournal();
+    if(parts[0]==='account') return viewAccount();
+    return await viewShelf();
+  }catch(e){ console.error(e); $app.innerHTML=header()+'<div class="empty">Something went wrong. Pull down to refresh.</div>'; }
+}
+
+/* ============ BOOT ============ */
+(async function init(){
+  applyTheme();
+  S.preview = CONFIG.SUPABASE_URL.includes('YOUR-') || !window.supabase;
+  if(!S.preview){
+    S.sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+    const { data } = await S.sb.auth.getSession(); S.user = data.session?.user || null;
+    await loadProfile();
+    S.sb.auth.onAuthStateChange(async (_e, session)=>{
+      const was=S.user?.id; S.user=session?.user||null;
+      if(was!==S.user?.id){ await loadProfile(); S.pages={}; route(); }
+    });
+  }
+  window.addEventListener('hashchange', route);
+  route();
+  if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>

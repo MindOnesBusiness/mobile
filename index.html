@@ -886,14 +886,14 @@ function viewAccount(){
     $app.innerHTML=header()+`<div class="hero"><h1>Enter the Vault</h1><p>Step 1 is free. Step 2 is optional.</p></div>
     <div class="panel start" style="text-align:left"><h2 style="text-align:center">How it works</h2>
       <p style="color:var(--ink)"><strong>Step 1 · Join free.</strong> Make an account below with your email. No payment and no crypto. You instantly get more of Destiny Lock, your Shadow Journal and the Guild Hall.</p>
-      <p style="color:var(--ink);margin:0"><strong>Step 2 · Become a Keyholder (optional).</strong> When you want everything, pay ${esc(CONFIG.VIP_PRICE_LABEL)} with crypto. <a href="#/guide/crypto">Never used crypto? Here's how.</a></p></div>
+      <p style="color:var(--ink);margin:0"><strong>Step 2 · Become a Keyholder (optional).</strong> When you want everything, pay ${esc(CONFIG.VIP_PRICE_LABEL)} with crypto. <a href="#/guide/crypto"><u>Never used crypto? Here's how.</u></a></p></div>
     <div class="panel"><div class="tabs" role="tablist"><button class="${authTab==='up'?'on':''}" data-tab="up" role="tab" aria-selected="${authTab==='up'}">JOIN FREE</button><button class="${authTab==='in'?'on':''}" data-tab="in" role="tab" aria-selected="${authTab==='in'}">SIGN IN</button></div>
      ${authTab==='up'?'<label for="aName">Display name</label><input id="aName" maxlength="40" autocomplete="nickname">':''}
      <label for="aEmail">Email</label><input id="aEmail" type="email" autocomplete="email">
      <label for="aPass">Password</label><input id="aPass" type="password" autocomplete="${authTab==='up'?'new-password':'current-password'}" minlength="8">
      ${authTab==='up'?'<label class="optin" for="aOpt"><input type="checkbox" id="aOpt"> Yes, email me new releases and Guild news. Unsubscribe any time.</label>':''}
-     ${authTab==='up'?'<p style="font-size:15px;margin:10px 0 0">By creating an account you agree to the <a href="'+esc(legalHref('terms'))+'">Terms</a> and <a href="'+esc(legalHref('privacy'))+'">Privacy Policy</a>. After you sign up, check your email and tap the confirmation link.</p>':''}
-     <div class="row"><button class="btn solid big" id="aGo">${authTab==='up'?'Create My Free Account':'Sign In'}</button>${authTab==='in'?'<button class="btn" id="aForgot">Forgot password</button>':''}</div></div>
+     ${authTab==='up'?'<p style="font-size:15px;margin:10px 0 0">By creating an account you agree to the <a href="'+esc(legalHref('terms'))+'"><u>Terms</u></a> and <a href="'+esc(legalHref('privacy'))+'"><u>Privacy Policy</u></a>. After you sign up, check your email and tap the confirmation link.</p>':''}
+     <div class="row"><button class="btn solid big" id="aGo">${authTab==='up'?'Create My Free Account':'Sign In'}</button>${authTab==='in'?'<button class="btn" id="aForgot"><u>Forgot password</u></button>':''}</div></div>
     ${vipPanel()}${prefsPanel()}${footer()}`;
     bindPrefs();
     $app.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{authTab=b.dataset.tab;viewAccount();});

@@ -1,0 +1,1151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MOB Vault</title>
+<meta name="description" content="The MOB Vault — easy books, a journal, and a friendly VIP Lounge from MindOnesBusiness.">
+<meta name="theme-color" content="#faf7f0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MOB Vault">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://www.blockonomics.co/js/pay-button.js" async></script>
+<script>
+/* ===================== MOB VAULT SETTINGS =====================
+   SUPABASE: your project link and anon (public) key.
+   THEME: "halloween" now. Switch to "classroom" after Halloween.
+   PAYPAL: your PayPal client id and monthly plan id (VIP, $7 a month).
+   PAY: your Blockonomics crypto button ids.
+   If SUPABASE_URL says YOUR-PROJECT, the app runs in PREVIEW MODE. */
+const CONFIG = {
+  SUPABASE_URL: 'https://ytceurmqxmpstcdbionu.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0Y2V1cm1xeG1wc3RjZGJpb251Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2ODM3NDAsImV4cCI6MjEwNzI1OTc0MH0.2XmSYbet3H6Ld79WvsA_F1VlckwItw_NwlFDEZdDM-g',
+  THEME: 'halloween',
+  VIP_PRICE_LABEL: '$7 a month',
+  CODEX_PRICE_LABEL: '$33',
+  CODEX_VIP_LABEL: '90 days',
+  PAYPAL: {
+    clientId: 'BAAaKREkwuba-RrZtWivRIpxJH3i-j4eXvnNFy0MvXjZs2asr3Ueg4HyupP7zKp25ZkLOg-VrJMwkzxj-4',
+    planId:   'P-1DB26236KU146891ENLP7JFI'      // VIP, $7 a month (set this price in PayPal)
+  },
+  PAY: {
+    membership: '845dc7070bc64dc2',   // crypto: $7 = 30 days as a VIP
+    codex:      'b1d8f46914ec46f6',   // crypto: $33 Codex pre-order (comes with 90 days as a VIP)
+    donation:   '0b56850650344c20'    // crypto: $1 or more
+  },
+  PDFJS: {                            // the PDF reader
+    lib:    'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/pdf.min.mjs',
+    worker: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/pdf.worker.min.mjs'
+  },
+  // Legal pages. Leave '' to use the built-in pages, or paste your own page's link.
+  LEGAL: { privacy: '', terms: '', accessibility: '' },
+  COPYRIGHT: '© October 10, 2026 · Parallel Construction LLC',
+  ADMIN_EMAIL: 'admin@mindonesbusiness.com'
+};
+</script>
+<style>
+:root{
+  --paper:#faf7f0; --grid:#f3dfc4; --ink:#1f1630; --muted:#5a4f63; --card:#ffffff;
+  --c1:#c2410c; --c2:#6d28d9; --c3:#15803d; --c4:#1d4ed8; --c5:#b91c1c; --gold:#f5b301;
+  --b1:#f97316; --b2:#7c3aed; --b3:#16a34a; --b4:#1f1630;
+  --sec:var(--c1); --nav:74px; --r:22px;
+}
+body[data-sec=shelf]{--sec:var(--c1)} body[data-sec=guild]{--sec:var(--c2)}
+body[data-sec=journal]{--sec:var(--c3)} body[data-sec=account]{--sec:var(--c4)} body[data-sec=admin]{--sec:var(--c5)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{
+  background-color:var(--paper); color:var(--ink);
+  font-family:'Poppins',system-ui,-apple-system,'Segoe UI',sans-serif; font-size:18px; line-height:1.6;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+h1,h2,h3{font-family:'Poppins',system-ui,sans-serif;font-weight:800;line-height:1.2;color:var(--ink)}
+button,input,textarea,select{font:inherit;color:inherit}
+a{color:var(--c4);font-weight:600}
+.app{max-width:600px;margin:0 auto;min-height:100%;padding:0 16px calc(var(--nav) + env(safe-area-inset-bottom) + 24px)}
+
+/* bunting (classroom flags) */
+.bunting{display:flex;height:26px;margin:0 -16px 10px;padding-top:env(safe-area-inset-top)}
+.bunting span{flex:1;clip-path:polygon(0 0,100% 0,50% 100%);margin:0 1px}
+.bunting span:nth-child(4n+1){background:var(--b1)}.bunting span:nth-child(4n+2){background:var(--b2)}
+.bunting span:nth-child(4n+3){background:var(--b3)}.bunting span:nth-child(4n+4){background:var(--b4)}
+
+/* header */
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
+.brand img{width:46px;height:46px;border-radius:50%;border:3px solid var(--ink);display:block}
+.brand b{display:block;font-weight:800;font-size:21px;letter-spacing:.01em;line-height:1.1}
+.brand small{display:block;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.badge{font-weight:800;font-size:12px;letter-spacing:.08em;padding:6px 12px;border-radius:999px;border:3px solid var(--ink);background:#fff;white-space:nowrap}
+.badge.member{background:#dbeafe}.badge.key{background:var(--gold)}.badge.admin{background:var(--c5);color:#fff;border-color:var(--c5)}
+.preview-bar{font-size:13px;font-weight:700;text-align:center;padding:8px;border:2px dashed var(--c5);border-radius:12px;color:var(--c5);background:#fff;margin-bottom:12px}
+
+/* hero */
+.hero{display:flex;align-items:center;gap:12px;margin:6px 0 18px}
+.hero .art{width:58px;height:58px;flex:none}
+.hero h1{font-size:30px}
+.hero p{color:var(--muted);font-size:17px;margin-top:2px}
+.section-title{display:inline-block;font-weight:800;font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:#fff;background:var(--sec);padding:4px 14px;border-radius:999px;margin:8px 0 12px}
+
+/* cards */
+.card{background:var(--card);border:3px solid var(--sec);border-radius:var(--r);padding:18px;margin-bottom:16px;box-shadow:5px 5px 0 var(--sec);position:relative}
+.card.ink{border-color:var(--ink);box-shadow:5px 5px 0 var(--ink)}
+.card.gold{border-color:var(--ink);box-shadow:5px 5px 0 var(--gold);background:#fffbea}
+.card.dash{border-style:dashed;box-shadow:none}
+.card h2{font-size:22px;margin-bottom:6px}
+.card p{margin-bottom:10px}
+.card p:last-child{margin-bottom:0}
+.note{font-size:15px;color:var(--muted)}
+.big-list{list-style:none;margin:8px 0 12px}
+.big-list li{padding-left:34px;position:relative;margin:8px 0;font-weight:500}
+.big-list li::before{content:"";position:absolute;left:4px;top:7px;width:18px;height:18px;border-radius:5px;background:var(--sec);transform:rotate(45deg) scale(.8)}
+.steps{list-style:none;counter-reset:s;margin:6px 0}
+.steps li{counter-increment:s;padding-left:46px;position:relative;margin:10px 0}
+.steps li::before{content:counter(s);position:absolute;left:0;top:-2px;width:34px;height:34px;border-radius:50%;background:var(--sec);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center}
+
+/* buttons & forms */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 22px;border-radius:999px;border:3px solid var(--ink);
+  background:var(--sec);color:#fff;font-weight:800;font-size:17px;cursor:pointer;text-decoration:none;min-height:50px;box-shadow:0 4px 0 var(--ink);transition:transform .08s}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.btn.white{background:#fff;color:var(--ink)}
+.btn.gold{background:var(--gold);color:var(--ink)}
+.btn.danger{background:#fff;color:var(--c5);border-color:var(--c5);box-shadow:0 4px 0 var(--c5)}
+.btn.small{min-height:40px;padding:6px 14px;font-size:14px;box-shadow:0 3px 0 var(--ink)}
+.btn.big{font-size:20px;padding:16px 30px;min-height:60px}
+.btn:disabled{opacity:.45;cursor:default}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center}
+label{display:block;font-weight:700;font-size:15px;margin:12px 0 6px}
+input,textarea,select{width:100%;background:#fff;border:3px solid #cfc6d6;border-radius:14px;padding:12px 14px;font-size:17px}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--sec)}
+textarea{min-height:120px;resize:vertical}
+.tabs{display:flex;gap:8px;margin-bottom:8px}
+.tabs button{flex:1;background:#fff;border:3px solid var(--ink);border-radius:14px;padding:10px;font-weight:800;cursor:pointer}
+.tabs button.on{background:var(--sec);color:#fff}
+.optin{display:flex;gap:10px;align-items:flex-start;font-weight:500;font-size:16px;margin:14px 0 0;cursor:pointer}
+.optin input{width:24px;height:24px;flex:none;margin-top:2px;accent-color:var(--sec)}
+details.more{margin-top:14px;border-top:2px dashed #d8cfe0;padding-top:12px}
+details.more summary{font-weight:700;cursor:pointer;color:var(--c4)}
+.paybtn{display:block;margin-top:10px}
+.pp-sub{margin-top:10px;max-width:420px}
+blockonomics-pay-button:not(:defined)::before{content:"Loading the pay button…";font-style:italic;color:var(--muted)}
+
+/* shelf */
+.shelf{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.book{display:flex;flex-direction:column;border:3px solid var(--ink);border-radius:var(--r);background:#fff;overflow:hidden;cursor:pointer;text-align:left;padding:0;box-shadow:5px 5px 0 var(--ink);transition:transform .1s}
+.book:active{transform:translate(2px,2px);box-shadow:3px 3px 0 var(--ink)}
+.book .cover{position:relative;height:130px;display:flex;align-items:center;justify-content:center;color:#fff;overflow:hidden}
+.book .cover svg.ico{width:58px;height:58px;position:relative;z-index:1}
+.book .cover i{position:absolute;opacity:.28;background:#fff}
+.book .cover i.c{width:70px;height:70px;border-radius:50%;top:-18px;right:-14px}
+.book .cover i.t{width:0;height:0;background:none;border-left:34px solid transparent;border-right:34px solid transparent;border-bottom:56px solid #fff;bottom:-10px;left:-8px}
+.book .cover i.s{width:26px;height:26px;border-radius:6px;bottom:14px;right:16px;transform:rotate(20deg)}
+.book .cover .lock{position:absolute;top:10px;left:10px;width:34px;height:34px;border-radius:50%;background:#fff;color:var(--ink);display:flex;align-items:center;justify-content:center;z-index:2;border:2px solid var(--ink)}
+.book .cover .lock svg{width:18px;height:18px}
+.book .info{padding:12px}
+.book h3{font-size:17px;line-height:1.25}
+.book p{font-size:14px;color:var(--muted);line-height:1.35;margin-top:4px}
+.pill{display:inline-block;white-space:nowrap;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:999px;border:2px solid var(--ink);margin:8px 4px 0 0;background:#fff}
+.pill.free{background:#dcfce7}.pill.member{background:#dbeafe}.pill.vip{background:var(--gold)}
+
+/* reader */
+.reader-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px}
+.back{background:#fff;border:3px solid var(--ink);border-radius:999px;padding:6px 16px;font-weight:800;cursor:pointer}
+.counter{font-weight:700;color:var(--muted);font-size:15px}
+.reader-title{font-size:26px;margin-bottom:6px}
+.pdfbox{overflow-x:auto;margin:12px 0}
+.pdfpage{margin:0 0 16px;text-align:center}
+.pdfpage canvas{display:block;margin:0 auto;border:3px solid var(--ink);border-radius:10px;background:#fff;box-shadow:4px 4px 0 var(--sec)}
+.pdfpage figcaption{font-size:13px;font-weight:700;color:var(--muted);margin-top:6px}
+.zoom{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.upgrade{text-align:center}
+.media.audio{width:100%;margin:8px 0}
+video.media{width:100%;border-radius:14px;border:3px solid var(--ink);background:#000}
+.vidwrap{position:relative;padding-top:56.25%;border-radius:14px;overflow:hidden;border:3px solid var(--ink)}
+.vidwrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.page-card{background:#fff;border:3px solid var(--ink);border-radius:var(--r);padding:20px;box-shadow:5px 5px 0 var(--sec);min-height:50vh;
+  background-image:linear-gradient(transparent 31px,#dbe4f3 32px);background-size:100% 32px}
+.page-card .body p{margin-bottom:12px}.page-card .body ul,.page-card .body ol{margin:0 0 12px 22px}
+.pager{display:flex;justify-content:space-between;align-items:center;margin-top:16px;gap:12px}
+.dots{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;flex:1}
+.dot{width:10px;height:10px;border-radius:50%;background:#d8cfe0;border:2px solid var(--ink)}.dot.on{background:var(--sec)}
+.locked{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:10px 0}
+.locked .padlock{width:84px;height:84px;border-radius:50%;background:var(--gold);border:3px solid var(--ink);display:flex;align-items:center;justify-content:center}
+.locked .padlock svg{width:40px;height:40px}
+
+/* guild */
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px;margin-bottom:6px}
+.chip{flex:none;border:3px solid var(--ink);border-radius:999px;padding:6px 14px;font-size:15px;font-weight:700;background:#fff;cursor:pointer}
+.chip.on{background:var(--sec);color:#fff}
+.thread{display:block;width:100%;text-align:left;background:#fff;border:3px solid var(--ink);border-left:12px solid var(--sec);border-radius:16px;padding:14px;margin-bottom:12px;cursor:pointer}
+.thread.sealed{border-style:dashed;border-left-style:solid;border-left-color:#bdb3c7;opacity:.8}
+.thread h3{font-size:18px;font-weight:700}
+.meta{font-size:14px;color:var(--muted);margin-top:4px}
+.post{border-left:5px solid var(--sec);padding:6px 0 6px 14px;margin:14px 0;background:#faf7ff;border-radius:0 12px 12px 0}
+.post .who{font-weight:800;color:var(--sec)}
+.post .txt{white-space:pre-wrap}
+
+/* journal */
+.gate{border-color:var(--gc);box-shadow:5px 5px 0 var(--gc)}
+.gate-top{display:flex;align-items:center;gap:12px}
+.gate-num{width:46px;height:46px;flex:none;border-radius:50%;background:var(--gc);color:#fff;font-weight:800;font-size:20px;display:flex;align-items:center;justify-content:center;border:3px solid var(--ink)}
+.gate-num.dark{color:var(--ink)}
+.gate-emotion{font-size:26px;font-weight:800}
+.gate-small{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.gate-signal{margin:10px 0 6px}
+.gate-q{font-size:19px;font-weight:700;margin:6px 0 10px}
+.gate-locked{opacity:.6;box-shadow:none;border-style:dashed}
+.gate-sealed{font-weight:800;font-size:14px;color:var(--muted);margin-top:8px}
+.blur{filter:blur(5px);user-select:none}
+.rite{font-size:22px;font-weight:800;color:var(--c3);letter-spacing:.02em}
+
+/* admin */
+.adm-item{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:12px 0;border-top:2px dashed #ddd3e6}
+.adm-item:first-child{border-top:0}
+.adm-item b{font-size:17px;display:block}
+.adm-item .btns{display:flex;gap:6px;flex:none;flex-wrap:wrap;justify-content:flex-end}
+.versions{background:#fff6f6;border:2px solid var(--c5);border-radius:14px;padding:12px;margin-top:10px}
+.ver{padding:8px 0;border-top:1px dashed #e7c6c6}.ver:first-child{border-top:0}
+.ver input[type=file]{font-size:14px;padding:8px}
+.stats{display:flex;justify-content:center;gap:18px;flex-wrap:wrap;text-align:center}
+.stats b{display:block;font-size:28px;font-weight:800;color:var(--sec)}
+
+/* nav */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:#fff;border-top:3px solid var(--ink);padding-bottom:env(safe-area-inset-bottom)}
+.nav-in{max-width:600px;margin:0 auto;display:grid;grid-template-columns:repeat(var(--navn,4),1fr);height:var(--nav)}
+.nav a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-decoration:none;color:var(--muted);font-size:12px;font-weight:700}
+.nav a svg{width:26px;height:26px;padding:3px;border-radius:10px}
+.nav a.on{color:var(--ink)}
+.nav a.on svg{background:var(--navc);color:#fff}
+.nav a[data-k=shelf]{--navc:var(--c1)}.nav a[data-k=guild]{--navc:var(--c2)}.nav a[data-k=journal]{--navc:var(--c3)}.nav a[data-k=account]{--navc:var(--c4)}.nav a[data-k=admin]{--navc:var(--c5)}
+
+.toast{position:fixed;left:50%;bottom:calc(var(--nav) + 18px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#fff;font-weight:600;padding:10px 18px;border-radius:999px;z-index:30;font-size:16px;max-width:90vw;text-align:center}
+.empty{text-align:center;color:var(--muted);padding:24px 0;font-weight:600}
+.hidden{display:none!important}
+.foot{text-align:center;margin:30px 0 6px;font-size:15px;color:var(--muted);line-height:1.8}
+.foot a{color:var(--muted);margin:0 6px;white-space:nowrap}
+.foot .fine{font-size:13px;margin-top:8px}
+.foot .copy{display:block;font-size:clamp(10px,3.1vw,13px);white-space:nowrap;margin-top:12px}
+.legal h2{font-size:19px;margin:16px 0 6px}.legal ul{margin:0 0 10px 22px}.legal li{margin-bottom:6px}
+.spooky{display:none}
+html.spook .spooky{display:block}
+
+/* accessibility */
+.skip{position:absolute;left:-9999px;top:8px;z-index:50;background:var(--ink);color:#fff;padding:10px 14px;border-radius:10px}
+.skip:focus{left:12px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+:focus-visible{outline:3px solid var(--c4);outline-offset:3px;border-radius:8px}
+main:focus{outline:none}
+html.big .app{zoom:1.18}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body data-sec="shelf">
+<a class="skip" href="#app" onclick="document.getElementById('app').focus();return false;">Skip to content</a>
+<main class="app" id="app" tabindex="-1"></main>
+<nav class="nav" aria-label="Main"><div class="nav-in" id="nav"></div></nav>
+<div id="live" class="sr" role="status" aria-live="polite"></div>
+
+<script>
+/* ============ THEMES (change CONFIG.THEME) ============ */
+const THEMES = {
+  halloween:{ vars:{paper:'#faf7f0',grid:'#f3dfc4',ink:'#1f1630',muted:'#5a4f63',c1:'#c2410c',c2:'#6d28d9',c3:'#15803d',c4:'#1d4ed8',c5:'#b91c1c',gold:'#f5b301',
+              b1:'#f97316',b2:'#7c3aed',b3:'#16a34a',b4:'#1f1630'}, spooky:true },
+  classroom:{ vars:{paper:'#faf7f0',grid:'#e3e8f0',ink:'#1e293b',muted:'#516072',c1:'#c2410c',c2:'#7e22ce',c3:'#15803d',c4:'#1d4ed8',c5:'#b91c1c',gold:'#facc15',
+              b1:'#ef4444',b2:'#f59e0b',b3:'#22c55e',b4:'#3b82f6'}, spooky:false }
+};
+
+/* ============ ART ============ */
+const LOGO = 'brand-logo.jpg';
+const I = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const ICONS = {
+  shelf: I('<path d="M4 19V5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M8 7h7"/>'),
+  guild: I('<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/>'),
+  journal: I('<rect x="4" y="3" width="15" height="18" rx="2"/><path d="M8 3v18M11 8h5M11 12h5"/>'),
+  account: I('<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>'),
+  admin: I('<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>'),
+  lock: I('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'),
+  pdf: I('<path d="M4 19V5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M8 7h7M8 11h5"/>'),
+  booklet: I('<path d="M4 19V5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M8 7h7M8 11h5"/>'),
+  audio: I('<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>'),
+  video: I('<circle cx="12" cy="12" r="10"/><path d="M10 8l6 4-6 4z"/>')
+};
+const ART = {
+  pumpkin:`<svg class="art" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 16c-2-6 2-11 8-11" stroke="#3f6212" stroke-width="4" fill="none" stroke-linecap="round"/><ellipse cx="20" cy="39" rx="14" ry="19" fill="#ea580c"/><ellipse cx="44" cy="39" rx="14" ry="19" fill="#ea580c"/><ellipse cx="32" cy="39" rx="14" ry="21" fill="#f97316"/><path d="M21 35l5-6 5 6zM37 35l5-6 5 6z" fill="#1f1630"/><path d="M21 46q11 9 22 0l-4 1-3-3-4 3-4-3-3 3z" fill="#1f1630"/></svg>`,
+  ghost:`<svg class="art" viewBox="0 0 64 64" aria-hidden="true"><path d="M14 58V28a18 18 0 0 1 36 0v30l-6-5-6 5-6-5-6 5-6-5z" fill="#fff" stroke="#1f1630" stroke-width="3" stroke-linejoin="round"/><ellipse cx="25" cy="30" rx="3" ry="4" fill="#1f1630"/><ellipse cx="39" cy="30" rx="3" ry="4" fill="#1f1630"/><ellipse cx="32" cy="40" rx="4" ry="3" fill="#1f1630"/></svg>`,
+  bat:`<svg class="art" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 26c-2-5-5-5-6 0-6-7-16-8-24 0 6 0 10 4 11 9 3-3 7-3 9 1 2-2 6-2 10 3 4-5 8-5 10-3 2-4 6-4 9-1 1-5 5-9 11-9-8-8-18-7-24 0-1-5-4-5-6 0z" fill="#1f1630"/><circle cx="29" cy="29" r="1.6" fill="#f5b301"/><circle cx="35" cy="29" r="1.6" fill="#f5b301"/></svg>`,
+  candy:`<svg class="art" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6L56 56H8z" fill="#fff" stroke="#1f1630" stroke-width="3" stroke-linejoin="round"/><path d="M19.5 32h25L50 44H14z" fill="#f97316"/><path d="M14 44h36l6 12H8z" fill="#f5b301"/><path d="M32 6L56 56H8z" fill="none" stroke="#1f1630" stroke-width="3" stroke-linejoin="round"/></svg>`,
+  star:`<svg class="art" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 5l8 17 19 2-14 13 4 19-17-10-17 10 4-19L5 24l19-2z" fill="#f5b301" stroke="#1f1630" stroke-width="3" stroke-linejoin="round"/></svg>`,
+  apple:`<svg class="art" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 18c-8-6-24-4-24 14 0 14 10 26 18 26 3 0 4-2 6-2s3 2 6 2c8 0 18-12 18-26 0-18-16-20-24-14z" fill="#ef4444" stroke="#1f1630" stroke-width="3"/><path d="M32 18c0-6 2-10 6-12" stroke="#1f1630" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M36 12c6-4 12-2 12-2s-4 8-12 5z" fill="#16a34a" stroke="#1f1630" stroke-width="2"/></svg>`
+};
+const art = (spooky, plain) => (THEMES[CONFIG.THEME]||THEMES.halloween).spooky ? ART[spooky] : ART[plain];
+const COVER_COLORS = ['var(--c1)','var(--c2)','var(--c3)','var(--c4)','#be185d','#0f766e'];
+
+/* ============ PREVIEW DATA (only used when Supabase keys are missing) ============ */
+const PREVIEW = {
+  volumes:[
+    {id:'destiny-lock',title:'Destiny Lock',subtitle:'Keep what is yours safe',status:'live',sort:1,kind:'pdf',tier:'free'},
+    {id:'sample-audio',title:'Sample Audio',subtitle:'A preview of an audio item',status:'live',sort:2,kind:'audio',tier:'vip'}
+  ],
+  levels:{'destiny-lock':['free','member','vip']},
+  versions:{'destiny-lock':{free:'destiny-lock-free-peek.pdf'}},
+  categories:[{id:1,name:'Introductions',tier:'member'},{id:2,name:'Destiny Lock Circle',tier:'vip'},{id:3,name:'Shadow Work',tier:'vip'},{id:4,name:'Vault Business',tier:'vip'}],
+  threads:[
+    {id:1,category_id:1,title:'Say hi! Tell us who you are',body:'Who are you? Where are you from? What brought you here?',created_at:new Date().toISOString(),author:{display_name:'Evergreen'},posts:[{id:1,body:'Glad to be here!',created_at:new Date().toISOString(),author:{display_name:'Member'}}]},
+    {id:2,category_id:2,title:'Morning check-in: 7 days in a row',body:'Post your day count. What did you notice?',created_at:new Date().toISOString(),author:{display_name:'Evergreen'},posts:[]}
+  ]
+};
+
+/* ============ JOURNAL ============ */
+// n stays the same so saved journal entries keep working
+const SEVEN_GATES = [
+  {n:'I',   color:'#dc2626',          emotion:'Fear',               signal:'Fear says: get ready for something.',                 q:'What do I need to get ready for? What is one small step I can take?'},
+  {n:'II',  color:'#ea580c',          emotion:'Guilt',              signal:'Guilt says: I broke one of my own rules.',             q:'Which rule did I break? How can I make it right today?'},
+  {n:'III', color:'#f5b301',dark:true,emotion:'Anger',              signal:'Anger says: someone crossed a line.',                  q:'What line got crossed? What can I say or do so it stops?'},
+  {n:'IV',  color:'#16a34a',          emotion:'Hurt and Lonely',    signal:'Hurt says: I hoped for something that did not happen. Lonely says: I need my people.', q:'What did I hope for? Who can I reach out to today?'},
+  {n:'V',   color:'#2563eb',          emotion:'Frustrated',         signal:'Frustrated says: what I am doing is not working.',     q:'What keeps not working? What new way can I try next?'},
+  {n:'VI',  color:'#4f46e5',          emotion:'Let Down',           signal:'Let down says: things did not go the way I pictured.', q:'What did I expect? Should I change my goal or change my plan?'},
+  {n:'VII', color:'#7c3aed',          emotion:'Not Good Enough',    signal:'This feeling says: I need more skill or more help.',   q:'Where do I feel not good enough? What can I learn, practice, or ask for?'}
+];
+const JOURNAL_PROMPTS = [
+  'Where did I give away my power, my ideas, or my time without meaning to?',
+  'What "almost" moment still hurts? What did I share before it fell apart?',
+  'Who do I feel tangled up with? How would it feel to let them go in peace?',
+  'What good thing is meant for me that I have not claimed out loud yet?',
+  'What did my dreams show me this week?'
+];
+
+/* ============ STATE ============ */
+const S = { sb:null, preview:false, user:null, profile:null, isVip:false, isAdmin:false, vipUntil:null,
+            volumes:[], allVolumes:[], levels:{}, pages:{}, cats:[], demoVip:false, demoUser:false, demoAdmin:false };
+const $app = document.getElementById('app');
+
+/* ============ HELPERS ============ */
+const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const when = iso => { try { return new Date(iso).toLocaleDateString(undefined,{month:'short',day:'numeric'}); } catch(e){ return ''; } };
+const longDate = d => d.toLocaleDateString(undefined,{month:'long',day:'numeric',year:'numeric'});
+function toast(msg){ const t=document.createElement('div'); t.className='toast'; t.setAttribute('aria-hidden','true'); t.textContent=msg; document.body.appendChild(t);
+  const l=document.getElementById('live'); if(l){ l.textContent=''; setTimeout(()=>l.textContent=msg,50); } setTimeout(()=>t.remove(),4200); }
+function store(key,val){ try{ if(val===undefined) return JSON.parse(localStorage.getItem(key)||'null'); localStorage.setItem(key,JSON.stringify(val)); }catch(e){ return null; } }
+function applyTheme(){
+  const t=THEMES[CONFIG.THEME]||THEMES.halloween; const r=document.documentElement.style;
+  Object.entries(t.vars).forEach(([k,v])=>r.setProperty('--'+k,v));
+  document.documentElement.classList.toggle('spook', !!t.spooky);
+  document.querySelector('meta[name=theme-color]').content=t.vars.paper;
+}
+const signedIn = () => S.preview ? S.demoUser : !!S.user;
+const vip = () => S.preview ? S.demoVip : S.isVip;
+const admin = () => S.preview ? S.demoAdmin : S.isAdmin;
+const canOpen = tier => tier==='free' || (tier==='member' && signedIn()) || vip() || admin();
+const RANK = {free:0, member:1, vip:2};
+const TIER_LABEL = {free:'Free', member:'Members', vip:'VIPs'};
+const LEVEL_PILL = {free:'Free peek', member:'More for members', vip:'Full for VIPs'};
+const CARD_PILL = {free:'Free peek', member:'Members: more', vip:'VIPs: all'};
+const KIND_LABEL = {booklet:'Book', pdf:'PDF book', audio:'Audio', video:'Video'};
+const slug = s => String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40) || 'item';
+const isFileItem = v => v && v.kind && v.kind !== 'booklet';
+const displayName = () => S.preview ? 'Preview Member' : (S.profile?.display_name || S.user?.email || '');
+const paypalLive = () => ['new','active'].includes(S.profile?.paypal_status);
+
+/* ============ PAYMENTS ============ */
+function cryptoButton(uid, label){
+  return uid ? `<span class="paybtn"><blockonomics-pay-button uid="${esc(uid)}" label="${esc(label)}"></blockonomics-pay-button></span>
+    <p class="note" style="margin-top:8px"><a href="#/guide/crypto">New to crypto? See the 5 easy steps.</a></p>` : '<p class="note">Payments open soon.</p>';
+}
+function keyholderOffer(){
+  const perks = `<ul class="big-list"><li>Every locked book and file</li><li>All 7 gates in the journal</li><li>Every room in the VIP Lounge</li></ul>`;
+  if(!signedIn()) return `<div class="card gold"><h2>Become a VIP</h2><p><strong>${esc(CONFIG.VIP_PRICE_LABEL)}.</strong> VIPs get everything:</p>${perks}
+    <ol class="steps"><li><strong>Step 1:</strong> Make a free account. It takes 30 seconds.</li><li><strong>Step 2:</strong> Come back here and tap Subscribe.</li></ol>
+    <div class="row"><a class="btn big" href="#/account" onclick="authTab='up'">Join Free</a></div></div>`;
+  return `<div class="card gold"><h2>Become a VIP</h2><p><strong>${esc(CONFIG.VIP_PRICE_LABEL)}.</strong> VIPs get everything:</p>${perks}
+    <p><strong>Pay with PayPal.</strong> It renews each month. You can stop any time.</p>
+    <div class="pp-sub"></div>
+    <details class="more"><summary>Want to pay with crypto?</summary>
+      <p style="margin-top:8px">Crypto pays for 30 days at a time. It does not renew.</p>
+      ${cryptoButton(CONFIG.PAY.membership,'Pay with Crypto')}
+      <p class="note">We will email you a Vault key. Type it in on the Account page.</p></details></div>`;
+}
+
+let ppLoading = false;
+function loadPayPal(){
+  if(window.paypal || ppLoading || S.preview || !CONFIG.PAYPAL.clientId) return;
+  ppLoading = true;
+  const s=document.createElement('script');
+  s.src=`https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(CONFIG.PAYPAL.clientId)}&vault=true&intent=subscription`;
+  s.setAttribute('data-sdk-integration-source','button-factory');
+  s.onload=mountPayPal;
+  s.onerror=()=>{ ppLoading=false; document.querySelectorAll('.pp-sub').forEach(el=>el.innerHTML='<p class="note">PayPal did not load. Please refresh the page.</p>'); };
+  document.head.appendChild(s);
+}
+function mountPayPal(){
+  const spots=[...document.querySelectorAll('.pp-sub:not([data-ready])')];
+  if(!spots.length) return;
+  if(S.preview){ spots.forEach(el=>{ el.dataset.ready='1'; el.innerHTML='<p class="note">Preview: the PayPal Subscribe button shows here on the live app.</p>'; }); return; }
+  if(!window.paypal) return loadPayPal();
+  spots.forEach(el=>{
+    el.dataset.ready='1';
+    window.paypal.Buttons({
+      style:{ shape:'rect', color:'gold', layout:'vertical', label:'subscribe' },
+      createSubscription:(data, actions)=>actions.subscription.create({ plan_id: CONFIG.PAYPAL.planId, custom_id: S.user?.id || undefined }),
+      onApprove: async (data)=>{
+        const { error } = await S.sb.rpc('record_paypal_subscription',{ p_sub: data.subscriptionID });
+        if(error){ toast('Thank you! Your payment went through. If you are not a VIP soon, email us.'); return; }
+        await loadProfile(); toast('Thank you! You are a VIP now.');
+        location.hash='#/account'; route();
+      },
+      onError: ()=>toast('PayPal had a problem. Please try again.')
+    }).render(el).catch(()=>{});
+  });
+}
+
+/* ============ DATA ============ */
+async function loadProfile(){
+  if(S.preview || !S.user){ S.profile=null; S.isVip=false; S.isAdmin=false; S.vipUntil=null; return; }
+  let { data, error } = await S.sb.rpc('my_profile');
+  if(error){ ({ data } = await S.sb.from('profiles').select('display_name,is_vip,is_admin,vip_source,vip_until').eq('id',S.user.id).maybeSingle()); }
+  S.profile = data || {};
+  S.isAdmin = !!S.profile.is_admin;
+  S.vipUntil = S.profile.vip_until ? new Date(S.profile.vip_until) : null;
+  S.isVip = !!S.profile.is_vip || S.isAdmin || (!!S.vipUntil && S.vipUntil > new Date()) || paypalLive();
+}
+async function loadVolumes(){
+  if(S.preview){ S.allVolumes=S.volumes=PREVIEW.volumes; S.levels=PREVIEW.levels; return; }
+  const { data, error } = await S.sb.from('volumes').select('*').order('sort');
+  if(error) toast('The Shelf did not load. Please try again.');
+  S.allVolumes = data || [];
+  S.volumes = S.allVolumes.filter(v=>v.status!=='hidden');
+  const lv = await S.sb.rpc('shelf_levels');
+  S.levels = Object.fromEntries((lv.data||[]).map(r=>[r.volume_id, r.levels]));
+}
+async function loadPages(volId){
+  if(S.pages[volId]) return S.pages[volId];
+  if(S.preview) return (S.pages[volId]=[]);
+  const { data } = await S.sb.from('pages').select('id,volume_id,sort,title,tier,teaser,page_bodies(body)').eq('volume_id',volId).order('sort');
+  S.pages[volId] = (data||[]).map(p=>({...p, body: Array.isArray(p.page_bodies) ? p.page_bodies[0]?.body : p.page_bodies?.body }));
+  return S.pages[volId];
+}
+
+/* ============ NAV + HEADER + FOOTER ============ */
+function renderNav(active){
+  document.body.dataset.sec = active;
+  const items=[['shelf','Shelf','#/shelf'],['guild','VIP Lounge','#/guild'],['journal','Journal','#/journal'],['account','Account','#/account']];
+  if(admin()) items.push(['admin','Add','#/admin']);
+  const nav=document.getElementById('nav'); nav.style.setProperty('--navn', items.length);
+  nav.innerHTML = items.map(([k,l,h])=>`<a href="${h}" data-k="${k}" class="${k===active?'on':''}" ${k===active?'aria-current="page"':''}>${ICONS[k]}<span>${l}</span></a>`).join('');
+}
+function header(){
+  const b = !signedIn() ? '<span class="badge">GUEST</span>' : admin() ? '<span class="badge admin">ADMIN</span>' : vip() ? '<span class="badge key">VIP</span>' : '<span class="badge member">MEMBER</span>';
+  return `<div class="bunting" aria-hidden="true">${'<span></span>'.repeat(14)}</div>
+  ${S.preview?'<div class="preview-bar">PREVIEW MODE · not connected to Supabase</div>':''}
+  <div class="top"><a class="brand" href="#/shelf"><img src="${LOGO}" alt=""><span><b>MOB Vault</b><small>Mind Your Business</small></span></a>${b}</div>`;
+}
+function hero(title, line, pic){ return `<div class="hero">${pic||''}<div><h1>${title}</h1>${line?`<p>${line}</p>`:''}</div></div>`; }
+function legalHref(k){ return CONFIG.LEGAL[k] || '#/legal/'+k; }
+function copyright(){ return `<div class="copy">${esc(CONFIG.COPYRIGHT)}</div>`; }
+function footer(){
+  const ext = k => CONFIG.LEGAL[k] ? ' target="_blank" rel="noopener"' : '';
+  return `<footer class="foot">
+    <a href="${esc(legalHref('terms'))}"${ext('terms')}>Terms</a> · <a href="${esc(legalHref('privacy'))}"${ext('privacy')}>Privacy</a> · <a href="${esc(legalHref('accessibility'))}"${ext('accessibility')}>Accessibility</a> · <a href="#/guide/crypto">Pay with crypto</a>
+    <div class="fine">This app shares learning and spiritual ideas. It is not medical, mental health, legal, or money advice. All sales are final.</div>
+    <div class="fine">Need help? Email <a href="mailto:${esc(CONFIG.ADMIN_EMAIL)}" style="margin:0">${esc(CONFIG.ADMIN_EMAIL)}</a></div>
+    ${copyright()}
+  </footer>`;
+}
+function startHere(){
+  return `<div class="card" style="--sec:var(--c3)"><span class="section-title" style="margin-top:0">Start here</span>
+    <h2>Join free. It takes 30 seconds.</h2>
+    <p>You do not have to pay. You do not need crypto. A free account opens:</p>
+    <ul class="big-list"><li>More of <strong>Destiny Lock</strong></li><li>Your own private <strong>Shadow Journal</strong></li><li>The <strong>VIP Lounge</strong>, where members talk</li><li>Free and Members items on the Shelf</li></ul>
+    <div class="row"><a class="btn big" href="#/account" onclick="authTab='up'">Join Free</a></div>
+    <p class="note" style="margin-top:12px">Have an account? <a href="#/account" onclick="authTab='in'">Sign in</a></p></div>`;
+}
+function padlock(){ return `<div class="padlock">${ICONS.lock}</div>`; }
+function unlockBtn(tier){
+  if(tier==='member' || !signedIn()) return `<a class="btn" href="#/account" onclick="authTab='up'">${tier==='member'?'Join free to read':'Sign in to open'}</a>`;
+  return `<a class="btn gold" href="#/account">Become a VIP</a>`;
+}
+function joinGate(title, line){
+  return `<div class="card" style="text-align:center"><div class="locked">${padlock()}<h2>${esc(title)}</h2><p>${esc(line)}</p>
+  <a class="btn big" href="#/account" onclick="authTab='up'">Join Free</a></div></div>`;
+}
+function vipGate(title, line){
+  return `<div class="card gold" style="text-align:center"><div class="locked">${padlock()}<h2>${esc(title)}</h2><p>${esc(line)}</p>
+  <a class="btn gold" href="#/account">${signedIn()?'Become a VIP':'Sign in first'}</a></div></div>`;
+}
+
+/* ============ SHELF ============ */
+function cardPills(v){
+  const lv = S.levels[v.id];
+  if(lv && lv.length) return lv.map(t=>`<span class="pill ${t}">${CARD_PILL[t]}</span>`).join('');
+  return `<span class="pill ${v.tier||'free'}">${TIER_LABEL[v.tier||'free']}</span>`;
+}
+async function viewShelf(){
+  renderNav('shelf');
+  $app.innerHTML = header()+'<div class="empty">Opening the Vault…</div>';
+  await loadVolumes();
+  $app.innerHTML = header()+hero('The Shelf','Pick something to read, hear, or watch. A lock means it is for members or VIPs.', art('pumpkin','apple'))+`
+  ${signedIn()?'':startHere()}
+  <span class="section-title">On the Shelf</span>
+  <div class="shelf">${S.volumes.map((v,i)=>{ const locked=!canOpen(v.tier||'free'); return `<button class="book" data-vol="${esc(v.id)}">
+    <div class="cover" style="background:${COVER_COLORS[i%COVER_COLORS.length]}"><i class="c"></i><i class="t"></i><i class="s"></i>
+      ${locked?`<span class="lock" aria-label="Locked">${ICONS.lock}</span>`:''}${ICONS[v.kind||'booklet'].replace('<svg','<svg class="ico"')}</div>
+    <div class="info"><h3>${esc(v.title)}</h3><p>${esc(v.subtitle||'')}</p>${cardPills(v)}</div></button>`; }).join('') || '<div class="empty">Nothing here yet.</div>'}</div>`;
+  $app.insertAdjacentHTML('beforeend', `
+  ${vip()?'':'<div style="margin-top:22px"></div>'+keyholderOffer()}
+  <span class="section-title" style="margin-top:10px">Pre-order</span>
+  <div class="card"><h2>Codex of the 7 Gates · ${esc(CONFIG.CODEX_PRICE_LABEL)}</h2>
+   <p>Order your Codex now. It also comes with <strong>${esc(CONFIG.CODEX_VIP_LABEL)} as a VIP</strong> in the Vault.</p>
+   ${cryptoButton(CONFIG.PAY.codex,'Pre-order with Crypto')}
+   <p class="note">We will email you a Vault key.</p></div>
+  <div class="card"><h2>Help the Vault</h2><p>Give any amount, $1 or more. Thank you!</p>${cryptoButton(CONFIG.PAY.donation,'Give with Crypto')}</div>${footer()}`);
+  $app.querySelectorAll('[data-vol]').forEach(b=>b.onclick=()=>{ const v=S.volumes.find(x=>x.id===b.dataset.vol); location.hash = isFileItem(v) ? `#/item/${b.dataset.vol}` : `#/read/${b.dataset.vol}/0`; });
+}
+
+/* ---- Booklet reader (for text books added in Supabase) ---- */
+async function viewReader(volId, idx){
+  renderNav('shelf');
+  const pages = await loadPages(volId);
+  if(!S.volumes.length) await loadVolumes();
+  const vol = S.volumes.find(v=>v.id===volId);
+  if(!pages.length){ $app.innerHTML=header()+'<div class="empty">Nothing here yet.</div>'; return; }
+  idx = Math.max(0, Math.min(pages.length-1, idx|0));
+  const p = pages[idx];
+  const inner = !canOpen(p.tier) ? `<div class="locked">${padlock()}<p>${esc(p.teaser||(p.tier==='member'?'Join free to keep reading.':'This page is for VIPs.'))}</p>${unlockBtn(p.tier)}</div>`
+              : p.body ? `<div class="body">${p.body}</div>` : '<p class="empty">This page did not open. Try again soon.</p>';
+  $app.innerHTML = header()+`
+  <div class="reader-head"><button class="back" onclick="location.hash='#/shelf'">‹ Shelf</button><span class="counter">${esc(vol?.title||'')} · ${idx+1} of ${pages.length}</span></div>
+  <article class="page-card" id="card"><h2 class="reader-title">${esc(p.title)}</h2>${inner}</article>
+  <div class="pager"><button class="btn white small" id="prev" ${idx===0?'disabled':''} aria-label="Back one page">‹ Back</button>
+   <div class="dots">${pages.map((q,i)=>`<span class="dot ${i===idx?'on':''}"></span>`).join('')}</div>
+   <button class="btn small" id="next" ${idx===pages.length-1?'disabled':''} aria-label="Next page">Next ›</button></div>`;
+  const go = d => { const n=idx+d; if(n>=0&&n<pages.length) location.hash=`#/read/${volId}/${n}`; };
+  document.getElementById('prev').onclick=()=>go(-1);
+  document.getElementById('next').onclick=()=>go(1);
+}
+
+/* ---- Items: PDF / audio / video ---- */
+function embedUrl(u){
+  const y = String(u).match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([\w-]{11})/);
+  if(y) return 'https://www.youtube-nocookie.com/embed/'+y[1];
+  const m = String(u).match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if(m) return 'https://player.vimeo.com/video/'+m[1];
+  return null;
+}
+async function fileUrl(f){
+  if(!f || !f.file_path) return '';
+  if(f.bucket==='site') return f.file_path;
+  if(f.bucket==='shelf-public') return S.sb.storage.from('shelf-public').getPublicUrl(f.file_path).data.publicUrl;
+  const { data } = await S.sb.storage.from('shelf-sealed').createSignedUrl(f.file_path, 3600);
+  return data?.signedUrl || '';
+}
+async function pdfjs(){
+  if(!window.__pdfjs){ const m = await import(CONFIG.PDFJS.lib); m.GlobalWorkerOptions.workerSrc = CONFIG.PDFJS.worker; window.__pdfjs = m; }
+  return window.__pdfjs;
+}
+let pdfZoom = 1;
+async function renderPdf(url, box){
+  box.innerHTML = '<p class="empty">Opening the book…</p>';
+  try{
+    const lib = await pdfjs();
+    const doc = await lib.getDocument({ url }).promise;
+    box.innerHTML = '';
+    const width = Math.min(box.clientWidth || 360, 900);
+    for(let i=1;i<=doc.numPages;i++){
+      const page = await doc.getPage(i);
+      const base = page.getViewport({ scale:1 });
+      const scale = (width - 8) / base.width * pdfZoom;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const vp = page.getViewport({ scale: scale * dpr });
+      const fig = document.createElement('figure'); fig.className='pdfpage';
+      const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height;
+      c.style.width = (vp.width/dpr)+'px'; c.setAttribute('role','img'); c.setAttribute('aria-label',`Page ${i}`);
+      const cap = document.createElement('figcaption'); cap.textContent = `Page ${i} of ${doc.numPages}`;
+      fig.append(c, cap); box.appendChild(fig);
+      await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+    }
+  }catch(e){
+    console.error(e);
+    box.innerHTML = `<p class="empty">The book did not open here.</p><div class="row" style="justify-content:center"><a class="btn" href="${esc(url)}" target="_blank" rel="noopener">Open the PDF</a></div>`;
+  }
+}
+function upgradeNote(have, levels){
+  const top = levels.reduce((a,t)=>RANK[t]>RANK[a]?t:a, have);
+  if(RANK[top] <= RANK[have]) return '';
+  if(have==='free' && levels.includes('member') && !signedIn())
+    return `<div class="card upgrade" style="--sec:var(--c3)"><h2>Want to read more?</h2><p>This is the free peek. Make a free account to read more.</p><a class="btn big" href="#/account" onclick="authTab='up'">Join Free</a></div>`;
+  return `<div class="card gold upgrade"><h2>Want the whole book?</h2><p>VIPs get the full book and everything else in the Vault.</p><a class="btn gold" href="#/account">Become a VIP</a></div>`;
+}
+async function viewItem(id){
+  renderNav('shelf');
+  if(!S.volumes.length) await loadVolumes();
+  const v = S.volumes.find(x=>x.id===id);
+  if(!v){ $app.innerHTML=header()+'<div class="empty">Nothing here yet.</div>'; return; }
+  const frame = inner => header()+`
+  <div class="reader-head"><button class="back" onclick="location.hash='#/shelf'">‹ Shelf</button><span class="counter">${esc(KIND_LABEL[v.kind]||'')}</span></div>
+  <h1 class="reader-title">${esc(v.title)}</h1>${v.subtitle?`<p class="note" style="font-size:17px">${esc(v.subtitle)}</p>`:''}${inner}`;
+  const levels = S.levels[id] || [];
+
+  // Items with a free peek / members copy / full copy
+  if(levels.length){
+    let ver=null;
+    if(S.preview){ const t=[...levels].sort((a,b)=>RANK[b]-RANK[a]).find(t=>canOpen(t)); const p=t&&PREVIEW.versions[id]?.[t]; ver = t ? {tier:t, bucket:p?'site':null, file_path:p} : null; }
+    else { const { data } = await S.sb.from('shelf_versions').select('tier,bucket,file_path').eq('volume_id',id); ver=(data||[]).sort((a,b)=>RANK[b.tier]-RANK[a.tier])[0]||null; }
+    if(!ver){ const low=[...levels].sort((a,b)=>RANK[a]-RANK[b])[0];
+      $app.innerHTML = frame(`<div class="card" style="text-align:center"><div class="locked">${padlock()}<p>${low==='member'?'Make a free account to open this.':'This is for VIPs.'}</p>${unlockBtn(low)}</div></div>`); return; }
+    if(!ver.file_path){ $app.innerHTML = frame(`<div class="card dash"><p>Preview: the ${esc(TIER_LABEL[ver.tier])} copy opens here on the live app.</p></div>${upgradeNote(ver.tier, levels)}`); return; }
+    const url = await fileUrl(ver);
+    $app.innerHTML = frame(`${ver.tier!=='vip'&&levels.length>1?`<p style="margin:8px 0"><span class="pill ${ver.tier}">You are reading: ${LEVEL_PILL[ver.tier]}</span></p>`:''}
+      <div class="zoom"><button class="btn white small" id="zOut">Smaller</button><button class="btn white small" id="zIn">Bigger</button><a class="btn small" href="${esc(url)}" target="_blank" rel="noopener">Open PDF</a></div>
+      <div class="pdfbox" id="pdfbox"></div>${upgradeNote(ver.tier, levels)}`);
+    bindPdf(url); return;
+  }
+
+  // Single-file items
+  if(!canOpen(v.tier||'free')){
+    $app.innerHTML = frame(`<div class="card" style="text-align:center"><div class="locked">${padlock()}<p>${v.tier==='member'?'Make a free account to open this.':'This is for VIPs.'}</p>${unlockBtn(v.tier)}</div></div>`); return;
+  }
+  if(S.preview){ $app.innerHTML = frame(`<div class="card dash"><p>Preview: the ${esc(KIND_LABEL[v.kind])} opens here on the live app.</p></div>`); return; }
+  $app.innerHTML = frame('<div class="empty">Opening…</div>');
+  const { data:f } = await S.sb.from('shelf_files').select('bucket,file_path,video_url').eq('volume_id',id).maybeSingle();
+  if(!f){ $app.innerHTML = frame('<div class="empty">This did not open. Try again soon.</div>'); return; }
+  if(v.kind==='video' && f.video_url){
+    const e = embedUrl(f.video_url);
+    $app.innerHTML = frame(e ? `<div class="vidwrap" style="margin-top:12px"><iframe src="${esc(e)}" title="${esc(v.title)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div>`
+                             : `<div class="row"><a class="btn" href="${esc(f.video_url)}" target="_blank" rel="noopener">Watch</a></div>`); return;
+  }
+  const url = await fileUrl(f);
+  if(!url){ $app.innerHTML = frame('<div class="empty">This did not open. Try again soon.</div>'); return; }
+  if(v.kind==='pdf'){
+    $app.innerHTML = frame(`<div class="zoom"><button class="btn white small" id="zOut">Smaller</button><button class="btn white small" id="zIn">Bigger</button><a class="btn small" href="${esc(url)}" target="_blank" rel="noopener">Open PDF</a></div><div class="pdfbox" id="pdfbox"></div>`);
+    bindPdf(url); return;
+  }
+  if(v.kind==='audio'){ $app.innerHTML = frame(`<div class="card"><audio class="media audio" controls preload="metadata" src="${esc(url)}"></audio></div>`); return; }
+  $app.innerHTML = frame(`<video class="media" controls playsinline preload="metadata" src="${esc(url)}" style="margin-top:12px"></video>`);
+}
+function bindPdf(url){
+  const box=document.getElementById('pdfbox');
+  document.getElementById('zIn').onclick=()=>{ pdfZoom=Math.min(2.5,pdfZoom+0.25); renderPdf(url, box); };
+  document.getElementById('zOut').onclick=()=>{ pdfZoom=Math.max(0.75,pdfZoom-0.25); renderPdf(url, box); };
+  renderPdf(url, box);
+}
+
+/* ============ ADMIN: SHELF ============ */
+function adminTabs(which){ return `<div class="tabs" role="tablist" style="margin-bottom:16px"><button class="${which==='shelf'?'on':''}" onclick="location.hash='#/admin'">Shelf</button><button class="${which==='members'?'on':''}" onclick="location.hash='#/admin/members'">Members</button></div>`; }
+let openFiles = null;
+async function viewAdmin(){
+  renderNav('admin');
+  if(!admin()){ location.hash='#/shelf'; return; }
+  $app.innerHTML = header()+'<div class="empty">Opening…</div>';
+  await loadVolumes();
+  let vers = {};
+  if(!S.preview){ const { data } = await S.sb.from('shelf_versions').select('volume_id,tier,bucket,file_path'); (data||[]).forEach(r=>{ (vers[r.volume_id] ||= {})[r.tier]=r; }); }
+  else vers = {'destiny-lock':{free:{bucket:'site',file_path:'destiny-lock-free-peek.pdf'}}};
+  const items = S.allVolumes;
+  $app.innerHTML = header()+adminTabs('shelf')+hero('Add to the Shelf','Add a file or a video link. It shows on the Shelf right away.')+`
+  <div class="card">
+    <label for="nTitle">Title</label><input id="nTitle" maxlength="80" placeholder="Example: Night Watch">
+    <label for="nDesc">Short line for the card</label><input id="nDesc" maxlength="120" placeholder="Example: Keep your sleep safe">
+    <label for="nKind">Type</label><select id="nKind">
+      <option value="pdf">PDF book</option><option value="audio">Audio</option>
+      <option value="video-link">Video (YouTube or Vimeo link)</option><option value="video">Video (upload a file)</option></select>
+    <label for="nTier">Who can open it?</label><select id="nTier"><option value="vip">VIPs only</option><option value="member">Members and VIPs</option><option value="free">Everyone (free)</option></select>
+    <div id="nFileWrap"><label for="nFile">File</label><input id="nFile" type="file" accept="application/pdf"><p class="note" style="margin-top:6px">Each file can be up to 50 MB.</p></div>
+    <div id="nUrlWrap" class="hidden"><label for="nUrl">Video link</label><input id="nUrl" type="url" placeholder="https://youtu.be/…"><p class="note" style="margin-top:6px">Tip: set the YouTube video to Unlisted. Then it only plays here.</p></div>
+    <div class="row"><button class="btn" id="nGo">Put It on the Shelf</button></div>
+  </div>
+  <span class="section-title">On the Shelf now</span>
+  <div class="card">${items.length ? items.map(v=>`<div class="adm-item" style="flex-wrap:wrap"><div><b>${esc(v.title)}</b>
+     <span class="meta">${esc(KIND_LABEL[v.kind||'booklet']||'')} · ${TIER_LABEL[v.tier||'free']}${v.status==='hidden'?' · <strong>HIDDEN</strong>':''}</span></div>
+     <div class="btns">${v.kind==='pdf'?`<button class="btn white small" data-files="${esc(v.id)}">Files</button>`:''}
+       <button class="btn white small" data-toggle="${esc(v.id)}">${v.status==='hidden'?'Show':'Hide'}</button>
+       ${isFileItem(v)?`<button class="btn danger small" data-del="${esc(v.id)}">Delete</button>`:''}</div>
+     ${v.kind==='pdf'&&openFiles===v.id?`<div class="versions" style="flex-basis:100%"><p style="margin-bottom:6px"><strong>Extra copies.</strong> Give one book a free peek, a members copy, and a full copy. Each person sees the best copy they can open.</p>
+       ${['free','member','vip'].map(t=>{ const r=vers[v.id]?.[t]; return `<div class="ver"><b style="font-size:15px">${LEVEL_PILL[t]}</b>
+         <span class="meta" style="display:block">${r?'Has a file ✓':'No file yet'}</span>
+         <div class="row" style="margin-top:6px"><input type="file" accept="application/pdf" id="vf-${t}" aria-label="${LEVEL_PILL[t]} file" style="flex:1;min-width:180px">
+         <button class="btn small" data-vup="${t}">Upload</button>${r?`<button class="btn danger small" data-vrm="${t}">Remove</button>`:''}</div></div>`; }).join('')}</div>`:''}</div>`).join('') : '<div class="empty">Nothing yet.</div>'}</div>`;
+
+  const kindSel=document.getElementById('nKind');
+  kindSel.onchange=()=>{ const k=kindSel.value, link=k==='video-link';
+    document.getElementById('nFileWrap').classList.toggle('hidden',link); document.getElementById('nUrlWrap').classList.toggle('hidden',!link);
+    document.getElementById('nFile').accept = k==='pdf'?'application/pdf':k==='audio'?'audio/*':'video/*'; };
+  document.getElementById('nGo').onclick=async()=>{
+    const btn=document.getElementById('nGo');
+    const title=document.getElementById('nTitle').value.trim(), desc=document.getElementById('nDesc').value.trim();
+    const k=kindSel.value, tier=document.getElementById('nTier').value, kind = k==='video-link'?'video':k;
+    if(!title) return toast('Please add a title.');
+    if(S.preview) return toast('Preview mode: this works on the live app.');
+    let bucket=null, file_path=null, video_url=null;
+    if(k==='video-link'){ video_url=document.getElementById('nUrl').value.trim(); if(!/^https?:\/\//i.test(video_url)) return toast('Paste the whole video link. It starts with https://'); }
+    else {
+      const file=document.getElementById('nFile').files[0];
+      if(!file) return toast('Please pick a file.');
+      if(file.size > 50*1024*1024) return toast('That file is too big. It must be under 50 MB.');
+      bucket = tier==='free' ? 'shelf-public' : 'shelf-sealed';
+      const ext = (file.name.match(/\.[a-z0-9]+$/i)||[''])[0].toLowerCase();
+      file_path = `${Date.now()}-${slug(file.name.replace(/\.[^.]+$/,''))}${ext}`;
+      btn.disabled=true; btn.textContent='Uploading…';
+      const { error } = await S.sb.storage.from(bucket).upload(file_path, file, { contentType:file.type||undefined, upsert:false });
+      if(error){ btn.disabled=false; btn.textContent='Put It on the Shelf'; return toast('Upload did not work: '+error.message); }
+    }
+    btn.disabled=true; btn.textContent='Saving…';
+    const id = slug(title)+'-'+Date.now().toString(36).slice(-4);
+    const sort = Math.max(0, ...items.map(i=>i.sort||0)) + 1;
+    const r1 = await S.sb.from('volumes').insert({ id, numeral:'', title, subtitle:desc, status:'live', sort, kind, tier });
+    const r2 = r1.error ? r1 : await S.sb.from('shelf_files').insert({ volume_id:id, bucket, file_path, video_url });
+    if(r1.error || r2.error){
+      if(file_path) await S.sb.storage.from(bucket).remove([file_path]);
+      if(!r1.error) await S.sb.from('volumes').delete().eq('id',id);
+      btn.disabled=false; btn.textContent='Put It on the Shelf';
+      return toast('It did not save: '+(r1.error||r2.error).message);
+    }
+    toast('Done! It is on the Shelf.'); viewAdmin();
+  };
+  $app.querySelectorAll('[data-files]').forEach(b=>b.onclick=()=>{ openFiles = openFiles===b.dataset.files ? null : b.dataset.files; viewAdmin(); });
+  $app.querySelectorAll('[data-vup]').forEach(b=>b.onclick=async()=>{
+    const t=b.dataset.vup, file=document.getElementById('vf-'+t).files[0];
+    if(!file) return toast('Please pick a PDF first.');
+    if(S.preview) return toast('Preview mode: this works on the live app.');
+    if(file.size > 50*1024*1024) return toast('That file is too big. It must be under 50 MB.');
+    const bucket = t==='free' ? 'shelf-public' : 'shelf-sealed';
+    const path = `${Date.now()}-${slug(openFiles)}-${t}.pdf`;
+    b.disabled=true; b.textContent='Uploading…';
+    const up = await S.sb.storage.from(bucket).upload(path, file, { contentType:'application/pdf', upsert:false });
+    if(up.error){ b.disabled=false; b.textContent='Upload'; return toast('Upload did not work: '+up.error.message); }
+    const old = vers[openFiles]?.[t];
+    const { error } = await S.sb.from('shelf_versions').upsert({ volume_id:openFiles, tier:t, bucket, file_path:path }, { onConflict:'volume_id,tier' });
+    if(error){ await S.sb.storage.from(bucket).remove([path]); b.disabled=false; b.textContent='Upload'; return toast('It did not save: '+error.message); }
+    if(old && old.bucket!=='site') await S.sb.storage.from(old.bucket).remove([old.file_path]);
+    toast('Done! That copy is saved.'); viewAdmin();
+  });
+  $app.querySelectorAll('[data-vrm]').forEach(b=>b.onclick=async()=>{
+    const t=b.dataset.vrm, old=vers[openFiles]?.[t];
+    if(!confirm(`Remove the ${LEVEL_PILL[t]} copy?`)) return;
+    if(S.preview) return toast('Preview mode: this works on the live app.');
+    const { error } = await S.sb.from('shelf_versions').delete().eq('volume_id',openFiles).eq('tier',t);
+    if(error) return toast(error.message);
+    if(old && old.bucket!=='site') await S.sb.storage.from(old.bucket).remove([old.file_path]);
+    toast('Removed.'); viewAdmin();
+  });
+  $app.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=async()=>{
+    if(S.preview) return toast('Preview mode: this works on the live app.');
+    const v=items.find(x=>x.id===b.dataset.toggle);
+    const { error } = await S.sb.from('volumes').update({ status: v.status==='hidden'?'live':'hidden' }).eq('id',v.id);
+    if(error) return toast(error.message); toast(v.status==='hidden'?'It is on the Shelf again.':'It is hidden now.'); viewAdmin();
+  });
+  $app.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{
+    if(S.preview) return toast('Preview mode: this works on the live app.');
+    const v=items.find(x=>x.id===b.dataset.del);
+    if(!confirm(`Delete "${v.title}"? This also deletes its files. You can't undo this.`)) return;
+    const { data:f } = await S.sb.from('shelf_files').select('bucket,file_path').eq('volume_id',v.id).maybeSingle();
+    if(f?.file_path && f?.bucket) await S.sb.storage.from(f.bucket).remove([f.file_path]);
+    Object.values(vers[v.id]||{}).forEach(async r=>{ if(r.bucket!=='site') await S.sb.storage.from(r.bucket).remove([r.file_path]); });
+    const { error } = await S.sb.from('volumes').delete().eq('id',v.id);
+    if(error) return toast(error.message); toast('Deleted.'); viewAdmin();
+  });
+}
+
+/* ============ ADMIN: MEMBERS ============ */
+let memFilter = { who:'all', show:'all' };
+async function viewMembers(){
+  renderNav('admin');
+  if(!admin()){ location.hash='#/shelf'; return; }
+  $app.innerHTML = header()+adminTabs('members')+'<div class="empty">Loading members…</div>';
+  let rows=[];
+  if(S.preview){
+    const d=n=>new Date(Date.now()-n*864e5).toISOString();
+    rows=[{id:'1',email:'wren@example.com',display_name:'Wren',role:'Keyholder',joined:d(1),keyholder_until:null,email_confirmed:true,opted_in:true,list_added_at:null,paypal_status:'new',paypal_sub_id:'I-ABC123DEF456'},
+          {id:'2',email:'rook@example.com',display_name:'Rook',role:'Member',joined:d(3),keyholder_until:null,email_confirmed:true,opted_in:true,list_added_at:d(2)},
+          {id:'3',email:'sage@example.com',display_name:'Sage',role:'Member',joined:d(5),keyholder_until:null,email_confirmed:false,opted_in:false,list_added_at:null}];
+  } else {
+    const { data, error } = await S.sb.rpc('admin_members');
+    if(error){ $app.innerHTML = header()+adminTabs('members')+`<div class="card"><p>Members did not load: ${esc(error.message)}</p><p>Run the newest update file in Supabase, then reload.</p></div>`; return; }
+    rows=data||[];
+  }
+  const isKey = r => r.role==='Keyholder' || r.role==='Admin';
+  const ROLE = r => ({Keyholder:'VIP','Former Keyholder':'Past VIP'})[r.role] || r.role;
+  const shown = rows.filter(r =>
+    (memFilter.who==='all' || (memFilter.who==='key' ? isKey(r) : memFilter.who==='former' ? r.role==='Former Keyholder' : memFilter.who==='paypal' ? r.paypal_status==='new' : r.role==='Member')) &&
+    (memFilter.show==='all' || (memFilter.show==='optin' ? r.opted_in : !r.list_added_at)));
+  const count = f => rows.filter(f).length;
+  const sel = (k,v,l) => `<option value="${v}" ${memFilter[k]===v?'selected':''}>${l}</option>`;
+  const ppLine = r => !r.paypal_status ? '' : `<span class="meta" style="display:block"><strong>PayPal:</strong> ${r.paypal_status==='new'?'new, please check it':r.paypal_status==='active'?'checked ✓':'ended'}${r.paypal_sub_id?` · ${esc(r.paypal_sub_id)}`:''}</span>`;
+  const ppBtns = r => !r.paypal_status ? '' : r.paypal_status==='new'
+      ? `<button class="btn small" data-pp="${esc(r.id)}" data-st="active">Checked ✓</button><button class="btn danger small" data-pp="${esc(r.id)}" data-st="ended">End access</button>`
+      : r.paypal_status==='active' ? `<button class="btn danger small" data-pp="${esc(r.id)}" data-st="ended">End access</button>`
+      : `<button class="btn white small" data-pp="${esc(r.id)}" data-st="active">Turn back on</button>`;
+  $app.innerHTML = header()+adminTabs('members')+hero('Members','Everyone who joined. Use this for your email list.')+`
+  <div class="card"><div class="stats">
+    <div><b>${count(r=>r.role==='Member')}</b><span class="meta">Members</span></div>
+    <div><b>${count(isKey)}</b><span class="meta">VIPs</span></div>
+    <div><b>${count(r=>r.opted_in)}</b><span class="meta">Want emails</span></div>
+    <div><b>${count(r=>!r.list_added_at)}</b><span class="meta">Not on list</span></div>
+    <div><b>${count(r=>r.paypal_status==='new')}</b><span class="meta">PayPal to check</span></div></div></div>
+  ${count(r=>r.paypal_status==='new')?`<div class="card gold"><p><strong>New PayPal VIPs.</strong> They can use the Vault now. Open PayPal and look for each plan number. If it is real and paid, tap <strong>Checked</strong>. If not, tap <strong>End access</strong>.</p></div>`:''}
+  <div class="card">
+    <label for="fWho">Who</label><select id="fWho">${sel('who','all','Everyone')}${sel('who','member','Free members')}${sel('who','key','VIPs')}${sel('who','paypal','PayPal to check')}${sel('who','former','Past VIPs')}</select>
+    <label for="fShow">Show</label><select id="fShow">${sel('show','all','All of them')}${sel('show','new','Not on my list yet')}${sel('show','optin','Only people who want emails')}</select>
+    <div class="row"><button class="btn" id="mCopy">Copy ${shown.length} emails</button><button class="btn white" id="mCsv">Download list</button><button class="btn white" id="mMark">Mark ${shown.length} as on my list</button></div>
+    <p class="note" style="margin-top:10px">The list file has name, email, level, join date, and if they want emails. It works with systeme.io and other email tools.</p>
+  </div>
+  <div class="card">${shown.length ? shown.map(r=>`<div class="adm-item"><div style="min-width:0">
+      <b>${esc(r.display_name||'—')}</b><span class="meta" style="display:block;word-break:break-all">${esc(r.email)}</span>
+      <span class="meta" style="display:block">${esc(ROLE(r))} · joined ${when(r.joined)}${r.opted_in?' · wants emails':''}${r.email_confirmed?'':' · email not confirmed'}</span>${ppLine(r)}</div>
+      <div class="btns" style="flex-direction:column;align-items:flex-end">
+        <label class="optin" style="margin:0;font-size:14px"><input type="checkbox" data-added="${esc(r.id)}" ${r.list_added_at?'checked':''}> On list</label>
+        ${ppBtns(r)}
+        ${r.id===S.user?.id ? '<span class="meta">You</span>' : r.role==='Admin'
+          ? `<button class="btn danger small" data-admin="${esc(r.id)}" data-on="0" data-name="${esc(r.display_name||r.email)}">Remove admin</button>`
+          : `<button class="btn white small" data-admin="${esc(r.id)}" data-on="1" data-name="${esc(r.display_name||r.email)}">Make admin</button>`}</div></div>`).join('')
+    : '<div class="empty">No one matches.</div>'}</div>`;
+  document.getElementById('fWho').onchange=e=>{memFilter.who=e.target.value;viewMembers();};
+  document.getElementById('fShow').onchange=e=>{memFilter.show=e.target.value;viewMembers();};
+  document.getElementById('mCopy').onclick=async()=>{ const list=shown.map(r=>r.email).join(', '); if(!list) return toast('No emails to copy.');
+    try{ await navigator.clipboard.writeText(list); toast(`Copied ${shown.length} emails.`); }catch(e){ prompt('Copy these emails:', list); } };
+  document.getElementById('mCsv').onclick=()=>{
+    const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+    const lines=[['Name','Email','Level','Joined','VIP until','Wants emails','On my list','PayPal'].map(q).join(',')]
+      .concat(shown.map(r=>[r.display_name,r.email,ROLE(r),(r.joined||'').slice(0,10),(r.keyholder_until||'').slice(0,10),r.opted_in?'yes':'no',r.list_added_at?'yes':'no',r.paypal_status||''].map(q).join(',')));
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv'}));
+    a.download=`mob-vault-members-${new Date().toISOString().slice(0,10)}.csv`; document.body.appendChild(a); a.click(); a.remove();
+  };
+  const mark=async(ids,on)=>{ if(S.preview){ rows.filter(r=>ids.includes(r.id)).forEach(r=>r.list_added_at=on?new Date().toISOString():null); return toast('Preview mode: not saved.'); }
+    const { error } = await S.sb.rpc('admin_mark_added',{p_ids:ids,p_added:on}); if(error) toast(error.message); };
+  document.getElementById('mMark').onclick=async()=>{ if(!shown.length) return; await mark(shown.map(r=>r.id),true); toast(`Marked ${shown.length} as on your list.`); viewMembers(); };
+  $app.querySelectorAll('[data-added]').forEach(c=>c.onchange=()=>mark([c.dataset.added],c.checked));
+  $app.querySelectorAll('[data-admin]').forEach(b=>b.onclick=async()=>{
+    const on=b.dataset.on==='1', name=b.dataset.name;
+    if(!confirm(on ? `Make ${name} an admin? They will be able to change the Shelf and see every email.` : `Take admin away from ${name}?`)) return;
+    if(S.preview) return toast('Preview mode: not saved.');
+    const { error } = await S.sb.rpc('admin_set_admin',{p_id:b.dataset.admin,p_on:on});
+    if(error) return toast(error.message); toast(on ? `${name} is an admin now.` : `${name} is not an admin now.`); viewMembers();
+  });
+  $app.querySelectorAll('[data-pp]').forEach(b=>b.onclick=async()=>{
+    const st=b.dataset.st;
+    if(st==='ended' && !confirm('End this VIP\'s access? Also cancel the plan in PayPal so they are not charged.')) return;
+    if(S.preview) return toast('Preview mode: not saved.');
+    const { error } = await S.sb.rpc('admin_set_paypal',{p_id:b.dataset.pp,p_status:st});
+    if(error) return toast(error.message); toast(st==='active'?'Marked as checked.':st==='ended'?'Access ended.':'Done.'); viewMembers();
+  });
+}
+
+/* ============ GUILD HALL ============ */
+let guildCat = null;
+async function loadCats(){
+  if(S.preview){ S.cats=PREVIEW.categories; return; }
+  const { data } = await S.sb.from('forum_categories').select('*').order('sort'); S.cats=data||[];
+}
+async function viewGuild(){
+  renderNav('guild');
+  const top = hero('VIP Lounge','Hang out, talk, and help each other. Be kind.', art('ghost','star'));
+  if(!signedIn()){ $app.innerHTML=header()+top+joinGate('The VIP Lounge is for members','Make a free account to come in.'); return; }
+  $app.innerHTML=header()+'<div class="empty">Opening the VIP Lounge…</div>';
+  await loadCats();
+  const full = vip() || admin();
+  const open = S.cats.filter(c=>full || c.tier==='member');
+  const sealedCat = id => { const c=S.cats.find(x=>x.id===id); return c && c.tier!=='member' && !full; };
+  if(guildCat && !S.cats.some(c=>c.id===guildCat)) guildCat=null;
+  let threads=[], teasers=[];
+  if(S.preview){ const all=PREVIEW.threads.filter(t=>!guildCat||t.category_id===guildCat); threads=all.filter(t=>!sealedCat(t.category_id)); teasers=all.filter(t=>sealedCat(t.category_id)); }
+  else {
+    if(!guildCat || !sealedCat(guildCat)){
+      let q=S.sb.from('forum_threads').select('id,title,created_at,category_id,author:profiles(display_name),forum_posts(count)').order('created_at',{ascending:false}).limit(50);
+      if(guildCat) q=q.eq('category_id',guildCat);
+      const { data, error } = await q; if(error) toast('Posts did not load.'); threads=data||[];
+    }
+    if(!full){ const { data } = await S.sb.rpc('guild_teasers'); teasers=(data||[]).filter(t=>!guildCat||t.category_id===guildCat); }
+  }
+  const catName = id => S.cats.find(c=>c.id===id)?.name || '';
+  const replies = t => S.preview?(t.posts||[]).length:(t.forum_posts?.[0]?.count ?? t.replies ?? 0);
+  $app.innerHTML=header()+top+`
+  ${full?'':`<div class="card dash"><p>You can use the open rooms. Rooms with a lock are for VIPs.</p></div>`}
+  <div class="chips"><button class="chip ${!guildCat?'on':''}" data-c="">All</button>${S.cats.map(c=>`<button class="chip ${guildCat===c.id?'on':''}" data-c="${c.id}">${sealedCat(c.id)?'🔒 ':''}${esc(c.name)}</button>`).join('')}</div>
+  ${open.length?`<div class="row" style="margin:4px 0 14px"><button class="btn" id="newT">+ New Post</button></div>
+  <div id="newForm" class="card hidden"><h2>New post</h2>
+    <label for="tCat">Room</label><select id="tCat">${open.map(c=>`<option value="${c.id}" ${guildCat===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select>
+    <label for="tTitle">Title</label><input id="tTitle" maxlength="140">
+    <label for="tBody">Message</label><textarea id="tBody" maxlength="5000"></textarea>
+    <div class="row"><button class="btn" id="tPost">Post</button><button class="btn white" id="tCancel">Cancel</button></div></div>`:''}
+  ${threads.map(t=>{const n=replies(t);return `<button class="thread" data-t="${t.id}"><h3>${esc(t.title)}</h3>
+   <div class="meta">${esc(t.author?.display_name||'Member')} · ${esc(catName(t.category_id))} · ${when(t.created_at)} · ${n} ${n===1?'reply':'replies'}</div></button>`}).join('')}
+  ${teasers.map(t=>{const n=replies(t);return `<button class="thread sealed" data-lock="1"><h3>🔒 ${esc(t.title)}</h3>
+   <div class="meta">${esc(catName(t.category_id))} · ${when(t.created_at)} · ${n} ${n===1?'reply':'replies'} · VIPs only</div></button>`}).join('')}
+  ${!threads.length&&!teasers.length?'<div class="empty">No posts yet. Be the first!</div>':''}
+  ${full?'':vipGate('Want every room?','VIPs can read and post in every room.')}`;
+  $app.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{guildCat=b.dataset.c?+b.dataset.c:null;viewGuild();});
+  $app.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>location.hash='#/guild/'+b.dataset.t);
+  $app.querySelectorAll('[data-lock]').forEach(b=>b.onclick=()=>{ toast('That room is for VIPs.'); location.hash='#/account'; });
+  const f=document.getElementById('newForm'); if(!f) return;
+  document.getElementById('newT').onclick=()=>f.classList.remove('hidden');
+  document.getElementById('tCancel').onclick=()=>f.classList.add('hidden');
+  document.getElementById('tPost').onclick=async()=>{
+    const title=document.getElementById('tTitle').value.trim(), body=document.getElementById('tBody').value.trim(), cat=+document.getElementById('tCat').value;
+    if(!title||!body) return toast('Please add a title and a message.');
+    if(S.preview) return toast('Preview mode: posting works on the live app.');
+    const { error } = await S.sb.from('forum_threads').insert({title,body,category_id:cat,author_id:S.user.id});
+    if(error) return toast('That did not post: '+error.message);
+    toast('Posted!'); viewGuild();
+  };
+}
+async function viewThread(id){
+  renderNav('guild');
+  if(!signedIn()) return viewGuild();
+  let t, posts;
+  if(S.preview){ t=PREVIEW.threads.find(x=>x.id===+id); posts=t?.posts||[]; if(t && !vip() && PREVIEW.categories.find(c=>c.id===t.category_id)?.tier!=='member') t=null; }
+  else {
+    t=(await S.sb.from('forum_threads').select('id,title,body,created_at,author:profiles(display_name)').eq('id',id).maybeSingle()).data;
+    posts=(await S.sb.from('forum_posts').select('id,body,created_at,author:profiles(display_name)').eq('thread_id',id).order('created_at')).data||[];
+  }
+  if(!t){ $app.innerHTML=header()+'<div class="empty">We could not find that post.</div>'; return; }
+  $app.innerHTML=header()+`<div class="reader-head"><button class="back" onclick="location.hash='#/guild'">‹ VIP Lounge</button></div>
+  <div class="card"><h2>${esc(t.title)}</h2><div class="meta">${esc(t.author?.display_name||'Member')} · ${when(t.created_at)}</div>
+   <div class="post"><div class="txt">${esc(t.body)}</div></div>
+   ${posts.map(p=>`<div class="post"><div class="who">${esc(p.author?.display_name||'Member')} <span class="meta">· ${when(p.created_at)}</span></div><div class="txt">${esc(p.body)}</div></div>`).join('')||'<div class="empty">No replies yet.</div>'}</div>
+  <div class="card"><label for="rBody">Your reply</label><textarea id="rBody" maxlength="5000"></textarea><div class="row"><button class="btn" id="rPost">Reply</button></div></div>`;
+  document.getElementById('rPost').onclick=async()=>{
+    const body=document.getElementById('rBody').value.trim(); if(!body) return;
+    if(S.preview) return toast('Preview mode: replies work on the live app.');
+    const { error } = await S.sb.from('forum_posts').insert({thread_id:+id,body,author_id:S.user.id});
+    if(error) return toast('That did not post: '+error.message); viewThread(id);
+  };
+}
+
+/* ============ JOURNAL ============ */
+function viewJournal(){
+  renderNav('journal');
+  const top = hero('Shadow Journal','Only you can see this. It saves on this phone.', art('bat','apple'));
+  if(!signedIn()){ $app.innerHTML=header()+top+joinGate('Your journal is free','Make a free account to open your journal.'); return; }
+  const full = vip() || admin();
+  const OPEN_GATES = 2, OPEN_REFLECTIONS = 1;   // how much a free member gets
+  const entries = store('mobvault.journal') || {};
+  const box = key => `<textarea data-j="${key}" aria-label="Write your answer" placeholder="Write here…">${esc(entries[key]||'')}</textarea>`;
+  $app.innerHTML=header()+top+`
+  <span class="section-title">7 Gates · 7 Feelings</span>
+  <div class="card"><p>Here is one question for each of 7 hard feelings. When a feeling shows up, find its gate. Then do 3 steps:</p>
+    <p class="rite">Name it. Hear it. Heed it.</p><p class="note">Heed it means: do something about it.</p>
+    ${full?'':`<p style="margin-top:8px"><strong>Members can use the first ${OPEN_GATES} gates. VIPs can use all 7.</strong></p>`}</div>
+  ${SEVEN_GATES.map((g,i)=>{ const open = full || i < OPEN_GATES; return `<div class="card gate ${open?'':'gate-locked'}" style="--gc:${g.color}">
+    <div class="gate-top"><div class="gate-num ${g.dark?'dark':''}">${i+1}</div><div><div class="gate-small">Gate ${i+1}</div><div class="gate-emotion">${esc(g.emotion)}</div></div></div>
+    ${open?`<p class="gate-signal"><strong>Hear it:</strong> ${esc(g.signal)}</p><p class="gate-q">${esc(g.q)}</p>${box('g'+g.n)}`:'<p class="gate-sealed">🔒 For VIPs</p>'}</div>`; }).join('')}
+  <span class="section-title" style="margin-top:14px">Destiny Lock questions</span>
+  ${JOURNAL_PROMPTS.map((q,i)=>{ const open = full || i < OPEN_REFLECTIONS; return `<div class="card ${open?'':'gate-locked'}">
+   ${open?`<p class="gate-q">${esc(q)}</p>${box(i)}`:`<p class="gate-q blur" aria-hidden="true">${esc(q)}</p><p class="gate-sealed">🔒 For VIPs</p>`}</div>`; }).join('')}
+  ${full?'':vipGate('Open all 7 gates','VIPs can use every gate and every question.')}`;
+  $app.querySelectorAll('[data-j]').forEach(t=>t.oninput=()=>{const e=store('mobvault.journal')||{}; e[t.dataset.j]=t.value; store('mobvault.journal',e);});
+}
+
+/* ============ ACCOUNT ============ */
+function prefsPanel(){
+  const big=document.documentElement.classList.contains('big');
+  const opt = !!S.profile?.marketing_opt_in;
+  return `${signedIn()&&!S.preview?`<div class="card"><h2>Emails</h2><p>${opt?'You get emails when new things come out.':'Get an email when new things come out.'}</p>
+    <div class="row"><button class="btn white" id="optBtn" aria-pressed="${opt}">${opt?'Stop the emails':'Yes, email me'}</button></div></div>`:''}
+  <div class="card"><h2>Big text</h2><p>Make the words bigger in the whole app.</p>
+    <div class="row"><button class="btn white" id="bigText" aria-pressed="${big}">${big?'Use normal text':'Use big text'}</button></div></div>`;
+}
+function bindPrefs(){
+  const o=document.getElementById('optBtn');
+  if(o) o.onclick=async()=>{ const on=!S.profile?.marketing_opt_in; const { error } = await S.sb.rpc('set_my_opt_in',{p_on:on});
+    if(error) return toast(error.message); S.profile.marketing_opt_in=on; toast(on?'You are on the email list.':'No more emails.'); viewAccount(); };
+  const b=document.getElementById('bigText'); if(!b) return;
+  b.onclick=()=>{ const on=!document.documentElement.classList.contains('big'); document.documentElement.classList.toggle('big',on); store('mobvault.bigtext',on); viewAccount(); };
+}
+function statusCard(){
+  if(admin()) return `<div class="card" style="--sec:var(--c5)"><h2>Admin</h2><p>You run the Vault. Everything is open to you. Use the <strong>Add</strong> tab to change the Shelf and see members.</p></div>`;
+  if(!vip()) return keyholderOffer();
+  if(paypalLive()) return `<div class="card gold"><h2>VIP ⭐</h2><p>You pay with PayPal. It renews each month.</p><p class="note">Want to stop? Open PayPal and look for <strong>Automatic payments</strong>.</p></div>`;
+  if(S.vipUntil && !S.profile?.is_vip) return `<div class="card gold"><h2>VIP ⭐</h2><p>You are a VIP until <strong>${longDate(S.vipUntil)}</strong>.</p>
+    <p>Want it to keep going by itself? Switch to PayPal. It renews each month.</p><div class="pp-sub"></div>
+    <details class="more"><summary>Add 30 days with crypto</summary>${cryptoButton(CONFIG.PAY.membership,'Pay with Crypto')}</details></div>`;
+  return `<div class="card gold"><h2>VIP ⭐</h2><p>Everything in the Vault is open to you.</p></div>`;
+}
+let authTab='up';
+function viewAccount(){
+  renderNav('account');
+  if(!signedIn()){
+    $app.innerHTML=header()+hero('Your Account','Step 1 is free. Step 2 is only if you want more.', art('candy','star'))+`
+    <div class="card"><h2>How it works</h2><ol class="steps">
+      <li><strong>Join free.</strong> Make an account below. You do not pay. You get more of Destiny Lock, your journal, and the VIP Lounge.</li>
+      <li><strong>Become a VIP (if you want).</strong> It is ${esc(CONFIG.VIP_PRICE_LABEL)}. You can pay with PayPal or crypto.</li></ol></div>
+    <div class="card"><div class="tabs" role="tablist"><button class="${authTab==='up'?'on':''}" data-tab="up" role="tab" aria-selected="${authTab==='up'}">Join Free</button><button class="${authTab==='in'?'on':''}" data-tab="in" role="tab" aria-selected="${authTab==='in'}">Sign In</button></div>
+     ${authTab==='up'?'<label for="aName">Your name (others will see it)</label><input id="aName" maxlength="40" autocomplete="nickname">':''}
+     <label for="aEmail">Email</label><input id="aEmail" type="email" autocomplete="email">
+     <label for="aPass">Password (8 or more letters or numbers)</label><input id="aPass" type="password" autocomplete="${authTab==='up'?'new-password':'current-password'}" minlength="8">
+     ${authTab==='up'?`<label class="optin" for="aOpt"><input type="checkbox" id="aOpt"> Yes, email me when new things come out. I can stop any time.</label>
+     <p class="note" style="margin-top:10px">When you make an account, you agree to our <a href="${esc(legalHref('terms'))}">Terms</a> and <a href="${esc(legalHref('privacy'))}">Privacy</a> rules. Next, check your email. Tap the link to finish.</p>`:''}
+     <div class="row"><button class="btn big" id="aGo">${authTab==='up'?'Make My Free Account':'Sign In'}</button>${authTab==='in'?'<button class="btn white" id="aForgot">Forgot password</button>':''}</div></div>
+    ${keyholderOffer()}${prefsPanel()}${footer()}`;
+    bindPrefs();
+    $app.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{authTab=b.dataset.tab;viewAccount();});
+    document.getElementById('aGo').onclick=doAuth;
+    const fg=document.getElementById('aForgot'); if(fg) fg.onclick=async()=>{
+      const email=document.getElementById('aEmail').value.trim(); if(!email) return toast('Type your email first.');
+      if(S.preview) return toast('Preview mode.');
+      const { error } = await S.sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin}); toast(error?error.message:'Check your email for a link.');
+    };
+    return;
+  }
+  $app.innerHTML=header()+hero(esc(displayName()), admin()?'Admin':vip()?'VIP':'Free member', art('candy','star'))+`
+  ${statusCard()}
+  <div class="card"><h2>Got a Vault key?</h2><p>Type it here. Codex buyers: your key is in your order email.</p>
+   <label for="code">Vault key</label><input id="code" placeholder="MOB-XXXX-XXXX" autocapitalize="characters">
+   <div class="row"><button class="btn" id="redeem">Use Key</button></div></div>
+  ${prefsPanel()}
+  ${S.preview?`<div class="card dash"><h2>Preview buttons</h2><p>Try the app as each kind of person.</p><div class="row"><button class="btn white small" id="demoVip">${S.demoVip?'Stop being a VIP':'Be a VIP'}</button><button class="btn white small" id="demoAdmin">${S.demoAdmin?'Stop being admin':'Be admin'}</button></div></div>`:''}
+  <div class="row"><button class="btn white" id="out">Sign Out</button></div>${footer()}`;
+  bindPrefs();
+  document.getElementById('redeem').onclick=redeem;
+  const dv=document.getElementById('demoVip'); if(dv) dv.onclick=()=>{S.demoVip=!S.demoVip;viewAccount();};
+  const da=document.getElementById('demoAdmin'); if(da) da.onclick=()=>{S.demoAdmin=!S.demoAdmin;viewAccount();};
+  document.getElementById('out').onclick=async()=>{ if(S.preview){S.demoUser=false;S.demoVip=false;S.demoAdmin=false;} else await S.sb.auth.signOut(); location.hash='#/shelf'; };
+}
+async function doAuth(){
+  const email=document.getElementById('aEmail').value.trim(), pass=document.getElementById('aPass').value;
+  if(!email||pass.length<8) return toast('Type your email and a password with 8 or more letters or numbers.');
+  if(S.preview){ S.demoUser=true; toast('Preview: you are signed in.'); return viewAccount(); }
+  if(authTab==='up'){
+    const name=(document.getElementById('aName').value.trim()||email.split('@')[0]).slice(0,40);
+    const { data, error } = await S.sb.auth.signUp({email,password:pass,options:{data:{display_name:name, marketing_opt_in: !!document.getElementById('aOpt')?.checked},emailRedirectTo:location.origin}});
+    if(error) return toast(error.message);
+    if(!data.session) return toast('Almost done! Check your email and tap the link.');
+  } else {
+    const { error } = await S.sb.auth.signInWithPassword({email,password:pass});
+    if(error) return toast(error.message);
+  }
+}
+async function redeem(){
+  const code=document.getElementById('code').value.trim().toUpperCase(); if(!code) return;
+  if(S.preview){ S.demoVip=true; toast('Preview: you are a VIP.'); return viewAccount(); }
+  const { data, error } = await S.sb.rpc('redeem_vip_code',{p_code:code});
+  if(error) return toast(error.message);
+  if(!data) return toast('That key does not work, or it was already used.');
+  await loadProfile(); S.pages={}; toast('Welcome, VIP!'); viewAccount();
+}
+
+/* ============ CRYPTO GUIDE ============ */
+function viewCryptoGuide(){
+  renderNav('account');
+  $app.innerHTML=header()+`<div class="reader-head"><button class="back" onclick="history.length>1?history.back():location.hash='#/account'">‹ Back</button></div>
+  ${hero('Pay with Crypto','New to this? It takes about 5 minutes.')}
+  <div class="card" style="--sec:var(--c3)"><p><strong>Good to know:</strong> You do not need crypto to join free. PayPal is the easy way to become a VIP. Crypto is just one more choice.</p></div>
+  <div class="card"><h2>1. Get a wallet app</h2><p>A wallet is an app that holds Bitcoin. Pick one:</p><ul class="big-list">
+    <li><strong>Cash App</strong> is easy. If you have Cash App, you already have a Bitcoin wallet. Open the Bitcoin part of the app.</li>
+    <li><strong>Coinbase</strong> or <strong>Strike</strong> are easy too. Get the app. Sign up with your ID.</li>
+    <li><strong>BlueWallet</strong> or <strong>Exodus</strong> let you hold your own keys. You do not need to sign up. The app will show you 12 or 24 words. This is your secret word list. Write the words on paper. Keep them safe. Anyone with those words can take your coins. If you lose them, no one can get your wallet back.</li></ul></div>
+  <div class="card"><h2>2. Buy a little Bitcoin</h2><p>In the app, tap <strong>Buy</strong>. Pick Bitcoin. Pay with your bank card. Buy a few dollars more than the price. For $7, buy about $10. The extra pays a small fee.</p>
+    <p>Using BlueWallet or Exodus? Buy in Cash App, Coinbase, or Strike first. Then send it to your wallet.</p></div>
+  <div class="card"><h2>3. Tap the pay button</h2><p>Come back to the Vault. Tap the crypto pay button. Type the same email you use for the Vault. Pick Bitcoin. You will see a QR code, an address, and an amount.</p></div>
+  <div class="card"><h2>4. Send it</h2><ol class="steps">
+    <li>In your wallet app, open Bitcoin. Tap <strong>Send</strong>.</li>
+    <li>Tap the scan button. Scan the QR code. On one phone? Tap <strong>Copy</strong> on the address. Then paste it in your wallet.</li>
+    <li>Check that the amount is exactly right. Then tap send.</li></ol>
+    <p>Keep the pay page open until it says your payment came in.</p></div>
+  <div class="card"><h2>5. Get your key</h2><p>Bitcoin can take 10 to 60 minutes. Then we email you a Vault key. Open <strong>Account</strong>. Type the key in the Vault key box. Tap <strong>Use Key</strong>. That is it!</p></div>
+  <div class="card" style="--sec:var(--c5)"><h2>Be safe</h2><ul class="big-list">
+    <li>Crypto payments can't be undone. Check the amount and the address first.</li>
+    <li>Never share your 12 or 24 secret words. Not with us. Not with anyone. We will never ask for them.</li>
+    <li>The price of Bitcoin moves. The pay page holds your price for a short time. If time runs out, just start again.</li>
+    <li>Stuck? Email <a href="mailto:${esc(CONFIG.ADMIN_EMAIL)}">${esc(CONFIG.ADMIN_EMAIL)}</a>. Tell us the email you used to pay. We will help.</li></ul></div>
+  ${footer()}`;
+}
+
+/* ============ LEGAL PAGES (built in) ============ */
+const LEGAL_UPDATED = 'October 26, 2026';
+const LEGAL_PAGES = {
+  terms: ['Terms', `
+    <p>These are the rules for the MOB Vault app. The app is run by Parallel Construction LLC, the company behind MindOnesBusiness. We call ourselves "we" and "us." When you make an account or buy something, you agree to these rules.</p>
+    <h2>Your account</h2><ul><li>You must be 18 or older.</li><li>Keep your password secret.</li><li>You are in charge of what happens on your account.</li><li>We can close accounts that are mean, unsafe, or break these rules.</li></ul>
+    <h2>Paying</h2><ul>
+      <li>A free account costs nothing.</li>
+      <li>Being a VIP costs ${esc(CONFIG.VIP_PRICE_LABEL)}.</li>
+      <li>If you pay with PayPal, it renews each month until you stop it. You can stop it any time in PayPal.</li>
+      <li>If you pay with crypto, you get 30 days. It does not renew.</li>
+      <li>The Codex pre-order is ${esc(CONFIG.CODEX_PRICE_LABEL)}. It comes with ${esc(CONFIG.CODEX_VIP_LABEL)} as a VIP.</li>
+      <li>Crypto payments can't be undone.</li>
+      <li><strong>All sales are final. We do not give refunds.</strong></li>
+      <li>A Vault key works one time. Do not sell it or share it.</li></ul>
+    <h2>Our stuff</h2><p>The books, files, and art in the Vault belong to us. They are for you to use. Please do not copy them, sell them, or share them. We may add, change, or take away things over time.</p>
+    <h2>This is not advice</h2><p>The Vault shares learning and spiritual ideas. It is not medical, mental health, legal, or money advice. It does not take the place of a doctor, a counselor, or a lawyer. If you are in danger, call 911. In the US, you can also call or text 988 any time, day or night.</p>
+    <h2>The VIP Lounge</h2><p>Be kind. Do not bully, threaten, or spam. Do not share other people's private info. We can take down posts or close accounts that break these rules. Your posts are still yours. You let us show them in the app.</p>
+    <h2>No promises</h2><p>We work hard to keep the app running. But we can't promise it will always work or never have mistakes. If something goes wrong, we owe you no more than what you paid us in the last 12 months. That is if the law allows it.</p>
+    <h2>Changes</h2><p>We may change these rules. If we do, we will change the date at the top. Questions? Email <a href="mailto:${esc(CONFIG.ADMIN_EMAIL)}">${esc(CONFIG.ADMIN_EMAIL)}</a>.</p>`],
+  privacy: ['Privacy', `
+    <p>We keep as little info as we can. We never sell your info.</p>
+    <h2>What we keep</h2><ul>
+      <li><strong>Your account:</strong> your email, your name, and your password. Our database company, Supabase, keeps them safe. We can't see your password.</li>
+      <li><strong>VIP info:</strong> if you are a VIP, when it ends, and how you paid.</li>
+      <li><strong>VIP Lounge:</strong> what you post. Members can see your name and posts in rooms they can open.</li>
+      <li><strong>Payments:</strong> PayPal and Blockonomics take your payments. They get what they need to do that. We get a note that you paid. We never see your card number.</li>
+      <li><strong>Emails:</strong> if you check the box for emails, we may add your name and email to our mail list. Each email has a link to stop. You can also turn it off on the Account page.</li></ul>
+    <h2>Your journal</h2><p>Your journal stays on your own phone. It never comes to us. We can't read it. If you clear your browser or get a new phone, your journal will be gone.</p>
+    <h2>What we don't do</h2><p>No ads. No tracking. We never sell or rent your info. The app saves a few small settings on your phone, like big text.</p>
+    <h2>Other companies</h2><p>The app uses fonts from Google. Payments use PayPal and Blockonomics. Videos may come from YouTube or Vimeo. These companies have their own rules about your info.</p>
+    <h2>Your choices</h2><p>Want to see, fix, or delete your info? Email us at <a href="mailto:${esc(CONFIG.ADMIN_EMAIL)}">${esc(CONFIG.ADMIN_EMAIL)}</a>. The Vault is for grown-ups. We do not mean to keep info from anyone under 18.</p>`],
+  accessibility: ['Accessibility', `
+    <p>We want everyone to be able to use the MOB Vault. That includes people who use screen readers, keyboards, or zoom. We aim to meet a set of web rules called WCAG 2.1 AA. These rules help make websites easy for all people to use.</p>
+    <h2>What is built in</h2><ul>
+      <li>A <strong>Big text</strong> button on the Account page.</li>
+      <li>Names on buttons, links, and boxes, so screen readers can read them.</li>
+      <li>A "Skip to content" link.</li>
+      <li>You can use the whole app with a keyboard.</li>
+      <li>If your phone is set to less motion, the app stops moving things.</li>
+      <li>Dark words on a light page, so they are easy to read.</li>
+      <li>Each PDF book has an "Open PDF" button. Your phone can read the file out loud.</li></ul>
+    <h2>Need help?</h2><p>Is something hard to use? Do you need a page in a different form? Email <a href="mailto:${esc(CONFIG.ADMIN_EMAIL)}">${esc(CONFIG.ADMIN_EMAIL)}</a>. We will write back in a few days and help.</p>`]
+};
+function viewLegal(k){
+  renderNav('account');
+  const p = LEGAL_PAGES[k]; if(!p){ location.hash='#/account'; return; }
+  $app.innerHTML=header()+`<div class="reader-head"><button class="back" onclick="history.length>1?history.back():location.hash='#/account'">‹ Back</button></div>
+  ${hero(esc(p[0]),'Last changed '+LEGAL_UPDATED)}<div class="card legal">${p[1]}</div>${footer()}`;
+}
+
+/* ============ ROUTER ============ */
+async function route(){
+  window.scrollTo(0,0);
+  const parts=(location.hash||'#/shelf').slice(2).split('/');
+  try{
+    if(parts[0]==='read') return await viewReader(decodeURIComponent(parts[1]), +parts[2]||0);
+    if(parts[0]==='item') return await viewItem(decodeURIComponent(parts[1]));
+    if(parts[0]==='guild') return parts[1] ? await viewThread(parts[1]) : await viewGuild();
+    if(parts[0]==='admin') return parts[1]==='members' ? await viewMembers() : await viewAdmin();
+    if(parts[0]==='guide') return viewCryptoGuide();
+    if(parts[0]==='legal') return viewLegal(parts[1]);
+    if(parts[0]==='journal') return viewJournal();
+    if(parts[0]==='account') return viewAccount();
+    return await viewShelf();
+  }catch(e){ console.error(e); $app.innerHTML=header()+'<div class="empty">Something went wrong. Please refresh.</div>'; }
+}
+
+/* ============ START ============ */
+(async function init(){
+  applyTheme();
+  if(store('mobvault.bigtext')) document.documentElement.classList.add('big');
+  // Copyright on every page, and PayPal buttons wherever a page has a spot for one
+  new MutationObserver(()=>{
+    if(!$app.querySelector('.foot')) $app.insertAdjacentHTML('beforeend', `<footer class="foot">${copyright()}</footer>`);
+    mountPayPal();
+  }).observe($app,{childList:true});
+  S.preview = CONFIG.SUPABASE_URL.includes('YOUR-') || !window.supabase;
+  if(!S.preview){
+    S.sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+    const { data } = await S.sb.auth.getSession(); S.user = data.session?.user || null;
+    await loadProfile();
+    S.sb.auth.onAuthStateChange(async (_e, session)=>{
+      const was=S.user?.id; S.user=session?.user||null;
+      if(was!==S.user?.id){ await loadProfile(); S.pages={}; route(); }
+    });
+  }
+  window.addEventListener('hashchange', route);
+  route();
+  if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>

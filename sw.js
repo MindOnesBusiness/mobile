@@ -1,6 +1,6 @@
 // MOB Vault service worker — caches the app shell so it opens offline.
 // Bump VERSION whenever you change index.html so phones pick up the update.
-const VERSION = 'mobvault-v24';
+const VERSION = 'mobvault-v25';
 const SHELL = ['/', '/index.html', '/manifest.json', '/logo-emblem.png', '/wordmark.jpg', '/favicon.png', '/apple-touch-icon.png', '/icon-192.png', '/icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener('activate', e => {

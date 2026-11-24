@@ -1,97 +1,61 @@
 # MOB Vault — mobile.mindonesbusiness.com
 
-The MOB Vault is the member app for MindOnesBusiness.
+The member app for MindOnesBusiness: short guides on the Shelf, a private Shadow Journal, the VIP Lounge (with a link to Trick Talk), and member profiles. Free to start. VIP is $7 a month.
 
-- **The Shelf:** guides, audio, and video in three swipeable rows: Personal Growth, Business Development, and Miscellaneous.
-- **Shadow Journal:** seven gates for seven difficult emotions (Name it · Hear it · Heed it), plus Destiny Lock reflections. Entries stay private on the device.
-- **VIP Lounge:** open, unfiltered conversation. Free members get The Commons and Introductions. VIPs get every room.
-- **Profiles:** username (also used to sign in), photo, and a short mission statement. VIPs get more room and extra touches.
+## Update 15 (all-in-one) — how to put it live
 
-Guests can preview. A free account opens more. **VIPs** ($7 a month) get everything. Pay with PayPal or crypto.
+1. In Supabase, open **SQL Editor**, paste all of `supabase-update-15.sql`, and tap **Run**. This one file includes updates 12, 13 and 14, so you do not need to run those. It is safe to run more than once, and safe if you already ran any of them. If anything fails, nothing changes.
+2. Upload `index.html`, `sw.js` and `README.md` to GitHub.
 
-Look: a dark "desk" of deep green, with ivory used like paper for reading and writing (journal, conversations, profiles, legal pages), and gold-foil accents.
+**Formidable Routine** (Tools):
+- **Morning:** Wake + Align 5, Exercise 5+, Fuel + Word 15, Prayer 5, Meditate 15, Journal 15, Reset 20, Enterprise Hour 30, Walk the dog 15, Buffer 15, then Leave. Start times count back from the leave time (default 7:30 AM).
+- **Make it yours:** tap **Edit my morning**, **Edit my evening**, or **Edit my prep list**. Add your own steps (with minutes, and for the morning, where it goes), or tap × to remove any step. **Put them back** brings our steps back. Times update right away.
+- **Exercise ladder:** 5 min in week 1, plus 2 min each week, up to 15. The wake time moves earlier to match.
+- **Rough morning:** a switch for the short version. Each person picks their steps in Settings (up to 35 min).
+- **Evening:** starts at wake time minus 6.5 hours of sleep minus the length of the evening list (60 min to start), plus a night-before prep list.
+- **Business:** this week's Enterprise Hour plan, notes for each week, and today's scoreboard.
+- **Free vs VIP:** free members get the checklists, the plan, and today's scoreboard. VIPs also get weekly totals, streaks, and the History tab.
 
-Brand: Heritage Green `#152C28`, Warm Ivory `#F3EFE5`, Antique Gold `#B79B62`, Charcoal `#202423`. Fonts: Marcellus (headings), Cinzel (small capitals), Inter (body text), all from Google Fonts.
+## Update 14 (Nov 2026 redesign) — now part of update 15
 
-## What is in this folder
+What it added:
+- **Bottom tabs:** Home · Shelf · Tools · Lounge · Me. Admin pages are on the Me page (admins only).
+- **Home:** "Pick up where you left off", "New since your last visit", one "Your next step" card, then the offers (VIP, the Codex at $33, and gifts).
+- **Shelf:** a 2-column card grid with filters (All · Growth · Business · Scripture · Classics · Toolkit), a search box, and a Saved button. Tapping a locked item opens a short note with Upgrade and Not now.
+- **Tools:** Cash & Hours Ledger, Focus Room (beta), Shadow Journal, and Trick Talk. The ones a person uses most move to the top.
+- **Cash & Hours Ledger:** hours worked or cash paid, live math, receipt numbers, a ready-to-text receipt, Mark confirmed, Void and Restore (nothing is ever deleted), and Copy full statement. A rate change only counts for new entries. Free: 1 ledger. VIP: unlimited ledgers, a view-only share link, and printing.
+- **Focus Room (beta):** one task, four timer modes (Sprint, Deep Work, Flow, Custom), a shrinking gold ring, Focus Mode (dims the screen, keeps it on, counts each time you leave), park-a-thought, a check-in at the end, today's log, a weekly chart, "Focusing now" with other members, and a link to the live focus table in Trick Talk. VIP: full history and time by tag. Note: a web app cannot block other apps on a phone.
+- **Lounge:** "Join a live table" button for Trick Talk. VIP rooms show the gold VIP badge.
 
-| File | What it does |
-|---|---|
-| `index.html` | The whole app. Settings are at the top in `CONFIG`. |
-| `logo-emblem.png`, `wordmark.jpg` | The MOB emblem (header and covers) and the MindOnesBusiness wordmark (top of the Shelf). |
-| `favicon.png`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png` | Browser and home-screen icons. |
-| `manifest.json`, `sw.js` | Let people install the app on their phone. |
-| `destiny-lock-free-peek.pdf` | The free preview of Destiny Lock. |
-| `supabase-setup.sql`, `supabase-update-1.sql` to `supabase-update-11.sql` | Build and update the database. Run them in order. |
-| `CNAME` | Points the app to mobile.mindonesbusiness.com. |
+## Settings to fill in (top of `index.html`)
 
-The members and full editions of Destiny Lock are **not** in this folder. They are private. Upload them inside the app (Admin → Shelf → Files).
+   - `DONATE_PAYPAL_URL`: paste your PayPal donate link. The "Give with PayPal" button shows up once it is filled in.
+   - `CODEX_REGULAR_PRICE`: the price shown after the sale ends (Nov 15, 11:59 PM Central). It is set to `$33`.
 
-## Update 11 (this release)
+## Shelf rows
 
-1. Upload every file in this folder to GitHub (the new dark theme and the new free preview of Destiny Lock).
-2. In Supabase, run `supabase-update-11.sql`. It gives Destiny Lock its cover description.
-3. In the app: **Admin → Shelf → Destiny Lock → Files**. Upload the new `destiny-lock-members.pdf` next to **Members edition** and `destiny-lock-vip.pdf` next to **Full edition**. The old files are replaced automatically.
+Personal Growth, Business Development, Scripture, Old Books, Toolkit, The Council. Pick the row in **Admin → Shelf**. An empty row shows a "Coming soon" card.
 
-Every Destiny Lock PDF carries the Parallel Construction LLC copyright on every page, a rights notice on the last page, and copyright details in the file's properties.
+## Access labels
 
-The **Short description** you type when adding an item is shown on its Shelf cover. Keep it to one sentence.
-
-## Update 10
-
-1. Upload every file in this folder to GitHub. You can delete the old `brand-logo.jpg` from GitHub.
-2. In Supabase, open **SQL Editor**, paste `supabase-update-10.sql`, and tap **Run**.
-3. Open the app. Go to **Account** and choose your username, photo, and mission statement.
-4. In **Admin → Shelf**, use the **Row** menu next to each item to place it in Personal Growth, Business Development, or Miscellaneous. Use **Cover** to add a cover image (tall, 2:3 shape works best). Items without a cover get a branded green-and-gold cover automatically.
-
-Update 10 adds: shelf rows and covers, The Commons room, Introductions opened to free members, usernames and username sign-in, profile photos (the `avatars` storage bucket), mission statements, and VIP profile extras.
-
-## Who sees what
-
-| | Guest | Free member | VIP ($7 a month) |
-|---|---|---|---|
-| Destiny Lock | Free preview | Members edition | Full edition |
-| Other Shelf items | Free items | Free and Members items | All |
-| VIP Lounge | Locked | The Commons and Introductions (read and post); VIP room titles shown locked | Every room |
-| Journal | Locked | First 2 gates and 1 reflection | Everything |
-| Profile | — | Photo, username, 100-character mission statement | 280 characters, gold photo ring, accent color, a link |
-
-## Open conversation
-
-The Lounge does not filter or edit posts. The Terms say posts are only removed if they break the law, threaten or harass someone, are spam, or share someone's private information. To remove a post, delete it in Supabase (**Table Editor → forum_threads** or **forum_posts**).
+Only three: **Free** (no account needed), **Free account** (sign up, no payment), **VIP**. VIP cards show a lock.
 
 ## Getting paid
 
-**PayPal (VIP, $7 a month).** A person creates a free account, then taps **Subscribe**. It renews monthly.
-- Right after they pay, the app makes them a VIP.
-- Go to **Admin → Members**, pick **PayPal to verify**, and look up each plan number in PayPal.
-  - Real and paid? Tap **Verified**.
-  - Not real, or they stopped paying? Tap **End access**, and cancel the plan in PayPal.
-
-**Crypto (Blockonomics).** Three buttons: VIP for 30 days ($7), Codex pre-order ($33), and support ($1 or more). When someone pays, email them a Vault key. Make keys in the SQL Editor:
+- **VIP by PayPal or card:** the "Join VIP — $7/month" button goes to https://mindonesbusiness.systeme.io/vip (`VIP_CHECKOUT_URL`). If the person is not signed in, the app has them make a free account first, then sends them to checkout.
+- **VIP by Bitcoin:** the Blockonomics button ($7 = 30 days).
+- After each payment, email a VIP code within 24 hours. Make codes in the SQL Editor:
 
 ```sql
--- 30-day keys
-select * from public.generate_vip_codes(20, 'MEMBERSHIP', 30);
--- Codex keys (90 days)
-select * from public.generate_vip_codes(50, 'CODEX-PRESALE', 90);
+select * from public.generate_vip_codes(20, 'MEMBERSHIP', 30);   -- 30-day codes
+select * from public.generate_vip_codes(50, 'CODEX', 90);        -- Codex codes (3 months of VIP)
 ```
 
-Each key works once. The person enters it on the Account page.
+Each code adds time on top of what the person has left.
 
-## Everyday jobs
+- **Codex:** "Buy the Codex" goes to https://codex.mindonesbusiness.com (`CODEX_URL`). The Codex is its own product. It comes with 3 months of VIP. VIP does not include the Codex.
+- **Gifts:** Bitcoin ($1 or more), and PayPal once `DONATE_PAYPAL_URL` is set.
 
-- **Add something to the Shelf:** Admin → Shelf. Fill in the form, pick the Row, and tap **Publish to Shelf**.
-- **Give one guide a free preview, members edition, and full edition:** tap **Files** next to a PDF.
-- **Move an item to another row:** change the **Row** menu next to it.
-- **Hide or delete something:** **Hide** keeps it; **Delete** removes it for good.
-- **Get emails for your list:** Admin → Members → **Not on my list yet** → **Copy emails** or **Download list** → **Mark as on my list**.
-- **Make someone an admin:** Admin → Members → **Make admin**.
-- **Change mission statement lengths:** `BIO_LIMIT` in `CONFIG`, and the matching numbers (100 and 280) in `update_my_profile` in the SQL.
-- **Change prices shown in the app:** `VIP_PRICE_LABEL` and `CODEX_PRICE_LABEL` in `CONFIG`. Change the real price in PayPal or Blockonomics too.
-- **Copyright line:** `COPYRIGHT` in `CONFIG`.
-- **After you change `index.html`:** change the number in `VERSION` in `sw.js` (for example `mobvault-v21`) so phones get the update.
+## After you change `index.html`
 
-## How locked things stay locked
-
-The database only sends locked words and files to people allowed to see them. Members cannot make themselves VIPs. Signing in with a username checks the password on the server first, and nobody can look up another person's email.
+Change `VERSION` in `sw.js` (now `mobvault-v30`) so phones get the update.
